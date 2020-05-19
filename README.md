@@ -15,11 +15,12 @@ kanban edit <title> # allows editing task description
 kanben view <title> # lists all info in <title>
 kanben start <title> # moves <title> into doing
 kanben complete <title> # moves <title> into done
+kanben delete <title> # individual delete
+kanben clear <col> # clears column
 ```
 
 ## Roadmap
 - *edit/view*: allow adding context and information to each task
 - timestamp option
-- delete
 - optional config buckets
 - priority ordering

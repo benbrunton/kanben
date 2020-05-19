@@ -12,22 +12,24 @@ pub struct Opts {
 pub enum SubCommand {
     Add(Item),
     Start(Item),
-    Complete(Item)
+    Complete(Item),
+    Delete(Item),
+    ClearDone
 }
 
-#[derive(Clap)]
+#[derive(Clap, Clone, PartialEq)]
 pub struct Item {
     pub title: String
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct Task {
     pub name: String,
     pub column: Column,
     pub description: String 
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub enum Column {
     Todo,
     Doing,
