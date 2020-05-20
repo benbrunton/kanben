@@ -10,10 +10,15 @@ pub struct Opts {
 
 #[derive(Clap)]
 pub enum SubCommand {
+    #[clap(about="Adds a new task in todo column")]
     Add(Item),
+    #[clap(about="Move a task into doing")]
     Start(Item),
+    #[clap(about="Move a task into done")]
     Complete(Item),
+    #[clap(about="Delete a task")]
     Delete(Item),
+    #[clap(about="clear tasks from the done column")]
     ClearDone
 }
 

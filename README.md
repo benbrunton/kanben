@@ -16,7 +16,7 @@ kanben view <title> # lists all info in <title>
 kanben start <title> # moves <title> into doing
 kanben complete <title> # moves <title> into done
 kanben delete <title> # individual delete
-kanben clear <col> # clears column
+kanben clear-done # clears done column
 ```
 
 ## Roadmap
