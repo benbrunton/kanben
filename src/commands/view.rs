@@ -18,7 +18,7 @@ mod tests {
     use super::*;
     use crate::opts::{Task, Column};
     use crate::test::{StoreMock, ReaderMock};
-    use std::{str, io::Cursor};
+    use std::io::Cursor;
 
     #[test]
     fn it_outputs_to_writer_from_reader() {
