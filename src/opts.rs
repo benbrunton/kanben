@@ -19,7 +19,11 @@ pub enum SubCommand {
     #[clap(about="Delete a task")]
     Delete(Item),
     #[clap(about="clear tasks from the done column")]
-    ClearDone
+    ClearDone,
+    #[clap(about="Edit the information about a task")]
+    Edit(Item),
+    #[clap(about="View any additional information about a task")]
+    View(Item),
 }
 
 #[derive(Clap, Clone, PartialEq)]
@@ -31,7 +35,7 @@ pub struct Item {
 pub struct Task {
     pub name: String,
     pub column: Column,
-    pub description: String 
+    pub description: Option<String> 
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]

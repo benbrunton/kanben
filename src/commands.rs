@@ -1,18 +1,34 @@
-use math::round;
 use crate::opts::*;
-use crate::store::{Store};
-use std::{str, io::Write};
+use crate::store::Store;
+use crate::editor::Editor;
+use crate::file::Reader;
+use std::io::Write;
+
+mod list;
+mod edit;
+mod view;
+use list::list_tasks;
+use edit::edit_item;
+use view::view_item;
 
 pub fn handle(
     cmd: Option<SubCommand>,
     store: &mut dyn Store,
-    writer: &mut dyn Write
+    writer: &mut dyn Write,
+    editor: &mut dyn Editor,
+    file_reader: &dyn Reader,
 ) {
     match cmd {
         None => list_tasks(store, writer),
         Some(SubCommand::Add(a)) => add_item(a.title, store),
         Some(SubCommand::Start(a)) => start_item(a.title, store),
         Some(SubCommand::Delete(a)) => delete_item(a.title, store),
+        Some(SubCommand::Edit(a)) => edit_item(
+            a.title, store, editor, writer
+        ),
+        Some(SubCommand::View(a)) => view_item(
+            a.title, store, writer, file_reader
+        ),
         Some(SubCommand::Complete(a)) => complete_item(
             a.title, store
         ),
@@ -20,65 +36,12 @@ pub fn handle(
     }
 }
 
-fn list_tasks(store: &dyn Store, writer: &mut dyn Write) {
-    writer.write(b"TODO:\t\t\tDOING:\t\t\tDONE:\n").unwrap();
-    let mut todo = vec!();
-    let mut doing = vec!();
-    let mut done = vec!();
-
-    for value in store.get_all().iter() {
-        match value.column {
-            Column::Todo => todo.push(value.name.clone()),
-            Column::Doing => doing.push(value.name.clone()),
-            Column::Done => done.push(value.name.clone()),
-        }
-    }
-
-    let col_max = find_col_max(vec![
-        todo.len(),
-        doing.len(),
-        done.len()
-    ]);
-
-    for n in 0..col_max {
-        let next_todo = todo.get(n);
-        let next_doing = doing.get(n);
-        let next_done = done.get(n);
-        write!(writer, "{}", col_text(next_todo)).unwrap();
-        write!(writer, "{}", col_text(next_doing)).unwrap();
-        if next_done.is_some() {
-            write!(writer, "{}", next_done.unwrap()).unwrap();
-        }
-        write!(writer, "\n").unwrap();
-    }
-    write!(writer, "\n").unwrap();
-}
-
-fn col_text(label: Option<&String>) -> String {
-    let mut output = String::from("");
-    let col_width = 24;
-    let tab_length = 8;
-    if label.is_some() {
-        output = format!("{}", label.unwrap());
-    }
-
-    let tabs_unrounded = (col_width as f64- output.len() as f64)
-        / tab_length as f64;
-    let tabs = round::ceil(tabs_unrounded, 0) as usize;
-    let mut tab_str = String::from("");
-    for _ in 0..tabs {
-       tab_str = format!("{}{}", tab_str, "\t"); 
-    }
-
-    format!("{}{}", output, tab_str)
-}
-
 fn add_item(name: String, store: &mut dyn Store) {
     if is_valid_key(&name) {
         let new_item = Task {
             name: String::from(&name),
             column: Column::Todo,
-            description: String::from("")   
+            description: None
         };
         store.set(&name, new_item);
     }
@@ -112,20 +75,18 @@ fn clear_done(store: &mut dyn Store) {
     }).for_each(|task| store.rm(&task.name));
 }
 
-fn find_col_max(cols: Vec<usize>) -> usize {
-    *cols.iter().max().unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::StoreMock;
+    use crate::test::{StoreMock, EditorMock, ReaderMock};
     use std::io::Cursor;
 
     #[test]
     fn it_adds_a_new_item_to_the_store() {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -134,11 +95,17 @@ mod tests {
         let task = Task {
             name: name.clone(),
             column: Column::Todo,
-            description: String::from("") 
+            description: None
         };
 
         let cmd = SubCommand::Add(item.clone());
-        handle(Some(cmd), &mut store, &mut writer);
+        handle(
+            Some(cmd),
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
         assert!(store.set_called_with(&name, &task));
     }
 
@@ -146,104 +113,62 @@ mod tests {
     fn it_doesnt_create_a_new_item_for_a_blank_key() {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
         let name = String::from(" ");
         let item = Item{
             title: name.clone()
         };
 
         let cmd = SubCommand::Add(item.clone());
-        handle(Some(cmd), &mut store, &mut writer);
+        handle(
+            Some(cmd),
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
         assert!(!store.set_called());
     }
 
     #[test]
-    fn it_outputs_the_kanban_headers_when_there_are_no_tasks() {
+    fn it_lists_tasks_when_no_command_is_passed() {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
 
-        handle(None, &mut store, &mut writer);
+        handle(
+            None,
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
 
         let output = writer.get_ref();
         assert_eq!(output, b"TODO:\t\t\tDOING:\t\t\tDONE:\n\n");
     }
 
     #[test]
-    fn it_displays_any_tasks_on_the_board() {
-        let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
-
-        store.insert_tasks(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: String::from("") 
-            }),
-        ));
-
-        handle(None, &mut store, &mut writer);
-
-        let output = writer.get_ref();
-        let str_output = str::from_utf8(&output).unwrap();
-        let expected_output = "TODO:\t\t\tDOING:\t\t\tDONE:
-\t\t\ttask1\t\t\t\n\n";
-        assert_eq!(str_output, expected_output);
-    }
-
-    #[test]
-    fn it_sorts_into_rows() {
-        let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
-
-        store.insert_tasks(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: String::from("") 
-            }),
-            ("task2", Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: String::from("") 
-            }),
-            ("task3", Task{
-                name: String::from("task3"),
-                column: Column::Doing,
-                description: String::from("") 
-            }),
-            ("task4", Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: String::from("") 
-            }),
-            ("task5", Task{
-                name: String::from("task5"),
-                column: Column::Todo,
-                description: String::from("") 
-            }),
-        ));
-
-        handle(None, &mut store, &mut writer);
-
-        let output = writer.get_ref();
-        let str_output = str::from_utf8(&output).unwrap();
-        let expected_output = "TODO:\t\t\tDOING:\t\t\tDONE:
-task2\t\t\ttask1\t\t\ttask4
-task5\t\t\ttask3\t\t\t\n\n";
-        assert_eq!(str_output, expected_output);
-
-    }
-
-    #[test]
     fn it_can_delete_an_item() {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
         };
 
         let cmd = SubCommand::Delete(item.clone());
-        handle(Some(cmd), &mut store, &mut writer);
+        handle(
+            Some(cmd),
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
         assert!(store.rm_called_with(&name));
 
     }
@@ -252,39 +177,43 @@ task5\t\t\ttask3\t\t\t\n\n";
     fn it_can_clear_done_column() {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
 
         store.insert_tasks(vec!(
             ("task1", Task{
                 name: String::from("task1"),
                 column: Column::Doing,
-                description: String::from("") 
+                description: None
             }),
             ("task2", Task{
                 name: String::from("task2"),
                 column: Column::Todo,
-                description: String::from("") 
+                description: None
             }),
             ("task3", Task{
                 name: String::from("task3"),
                 column: Column::Done,
-                description: String::from("") 
+                description: None
             }),
             ("task4", Task{
                 name: String::from("task4"),
                 column: Column::Done,
-                description: String::from("") 
+                description: None
             }),
             ("task5", Task{
                 name: String::from("task5"),
                 column: Column::Done,
-                description: String::from("") 
+                description: None
             }),
         ));
 
         handle(
             Some(SubCommand::ClearDone),
             &mut store,
-            &mut writer
+            &mut writer,
+            &mut editor,
+            &reader
         );
 
         assert!(store.rm_called_with("task3"));
@@ -294,47 +223,67 @@ task5\t\t\ttask3\t\t\t\n\n";
     }
 
     #[test]
-    fn it_takes_long_names_off_the_tabs() {
+    fn it_opens_an_editor_when_edit_command_is_passed() {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
+        let name = String::from("test");
+        let item = Item{
+            title: name.clone()
+        };
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
-                name: String::from("task1-very-long"),
-                column: Column::Doing,
-                description: String::from("") 
-            }),
-            ("task2-very-long", Task{
-                name: String::from("task2-very-long"),
-                column: Column::Todo,
-                description: String::from("") 
-            }),
-            ("task3", Task{
-                name: String::from("task3"),
-                column: Column::Doing,
-                description: String::from("") 
-            }),
-            ("task4", Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: String::from("") 
-            }),
-            ("task5", Task{
-                name: String::from("task5"),
-                column: Column::Todo,
-                description: String::from("") 
-            }),
-        ));
+        let task = Task{
+            name: name.clone(),
+            column: Column::Todo,
+            description: Some("test".to_string())
+        };
 
-        handle(None, &mut store, &mut writer);
+        store.return_from_get(task);
+
+
+        let cmd = SubCommand::Edit(item.clone());
+        handle(
+            Some(cmd),
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
+        assert!(editor.open_called());
+    }
+
+    #[test]
+    fn it_outputs_to_stdout_when_viewing_description() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let mut reader = ReaderMock::new();
+        let name = String::from("test");
+        let item = Item{
+            title: name.clone()
+        };
+
+        let task = Task{
+            name: name.clone(),
+            column: Column::Todo,
+            description: Some("test".to_string())
+        };
+
+        store.return_from_get(task);
+        reader.return_from_read("abcdef");
+
+        let cmd = SubCommand::View(item.clone());
+        handle(
+            Some(cmd),
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
 
         let output = writer.get_ref();
-        let str_output = str::from_utf8(&output).unwrap();
-        let expected_output = "TODO:\t\t\tDOING:\t\t\tDONE:
-task2-very-long\t\ttask1-very-long\t\ttask4
-task5\t\t\ttask3\t\t\t\n\n";
-        assert_eq!(str_output, expected_output);
-
+        assert_eq!(output, b"abcdef\n");
     }
 
 }

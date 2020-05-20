@@ -49,9 +49,11 @@ impl Store for PersistantStore {
     fn get(&self, key: &str) -> Option<Task> {
         let bucket = self.get_bucket();
         let item_result = bucket.get(String::from(key))
-            .expect("unable to get");
-        let json_item = item_result.expect("unable to get item");
-        Some(json_item.as_ref().clone())
+            .expect("unable to connect to kv store");
+        match item_result {
+            None => None,
+            Some(x) => Some(x.as_ref().clone())
+        }
     }
 
     fn rm(&mut self, key: &str) {

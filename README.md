@@ -1,9 +1,7 @@
 # Kanben
 
-Productivity for Ben, by Ben
-
-## Problem
-prioritisation, focus and WIP
+Kanban for Ben, by Ben. A personal, no-frills kanban tool
+for the terminal.
 
 
 ## Usage
@@ -20,7 +18,6 @@ kanben clear-done # clears done column
 ```
 
 ## Roadmap
-- *edit/view*: allow adding context and information to each task
 - timestamp option
 - optional config buckets
 - priority ordering

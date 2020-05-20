@@ -5,7 +5,7 @@ pub struct StoreMock {
     last_set_key: Option<String>,
     rm_calls: Vec<String>,
     last_set_task: Option<Task>,
-    tasks: Vec<Task>
+    tasks: Vec<Task>,
 }
 
 impl StoreMock {
@@ -44,6 +44,10 @@ impl StoreMock {
         self.tasks = tasks.iter()
             .map(|(_, task)| task.clone()).collect();
     }
+
+    pub fn return_from_get(&mut self, task: Task) {
+        self.last_set_task = Some(task); 
+    }
 }
 
 impl Store for StoreMock {
@@ -57,7 +61,7 @@ impl Store for StoreMock {
     }
 
     fn get(&self, _key: &str) -> Option<Task> {
-        unimplemented!()
+        self.last_set_task.clone()
     }
 
     fn rm(&mut self, key: &str) {
@@ -76,7 +80,7 @@ mod tests {
         let task = Task {
             name: name.clone(),
             column: Column::Doing,
-            description: String::from("") 
+            description: None
         };
 
         store.set(&name, task.clone());
@@ -91,13 +95,13 @@ mod tests {
         let passed_task = Task {
             name: String::from("fake test"),
             column: Column::Doing,
-            description: String::from("") 
+            description: None
         };
 
         let checked_task = Task {
             name: name.clone(),
             column: Column::Doing,
-            description: String::from("") 
+            description: None
         };
 
 
@@ -121,7 +125,7 @@ mod tests {
         let task = Task {
             name: String::from("fake test"),
             column: Column::Doing,
-            description: String::from("") 
+            description: None
         };
 
         store.set(&name, task.clone());
@@ -136,7 +140,7 @@ mod tests {
         let task = Task {
             name: String::from("fake test"),
             column: Column::Doing,
-            description: String::from("") 
+            description: None
         };
 
         store.insert_tasks(vec!((&name, task.clone())));
@@ -158,5 +162,19 @@ mod tests {
         store.rm("test2");
         assert!(store.rm_called_with("test"));
         assert!(store.rm_called_with("test2"));
+    }
+
+    #[test]
+    fn it_can_set_the_response_of_get() {
+        let mut store = StoreMock::new();
+        let task = Task {
+            name: String::from("test"),
+            column: Column::Doing,
+            description: None
+        };
+
+        store.return_from_get(task.clone());
+
+        assert_eq!(store.get("test").unwrap(), task.clone());
     }
 }
