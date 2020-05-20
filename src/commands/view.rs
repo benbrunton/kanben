@@ -8,9 +8,38 @@ pub fn view_item(
     writer: &mut dyn Write,
     reader: &dyn Reader
 ) {
-    let task = store.get(&key).unwrap();
-    let contents = reader.read(&task.description.unwrap());
-    write!(writer, "{}\n", contents.unwrap()).unwrap();
+    let task_result = store.get(&key);
+
+    if task_result.is_none() {
+        write!(
+            writer,
+            "No task named '{}' found.\n",
+            &key
+        ).unwrap();
+        return;
+    }
+
+    let task = task_result.unwrap();
+
+    if task.description.is_none() {
+        write!(
+            writer,
+            "Empty description\n",
+        ).unwrap();
+        return;
+    }
+
+    let read_result = reader.read(&task.description.unwrap());
+
+    if read_result.is_none() {
+        write!(
+            writer,
+            "Error loading file for '{}'\n",
+            &key
+        ).unwrap();
+        return;
+    }
+    write!(writer, "{}\n", read_result.unwrap()).unwrap();
 }
 
 #[cfg(test)]
@@ -74,4 +103,76 @@ mod tests {
         assert_eq!(output, b"file contents\n");
     }
 
+    #[test]
+    fn it_outputs_a_message_when_no_task_exists() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let reader = ReaderMock::new();
+        let name = "test";
+
+        view_item(
+            name.to_string(),
+            &mut store,
+            &mut writer,
+            &reader
+        );
+
+        let output = writer.get_ref();
+        assert_eq!(output, b"No task named 'test' found.\n");
+    }
+
+    #[test]
+    fn it_outputs_a_message_when_no_description_exists() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let reader = ReaderMock::new();
+        let name = "test";
+
+        let task = Task{
+            name: name.to_string(),
+            column: Column::Todo,
+            description: None
+        };
+
+        store.return_from_get(task);
+
+        view_item(
+            name.to_string(),
+            &mut store,
+            &mut writer,
+            &reader
+        );
+
+        let output = writer.get_ref();
+        assert_eq!(output, b"Empty description\n");
+
+    }
+
+    #[test]
+    fn it_outputs_a_message_when_description_file_fails_to_open() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let mut reader = ReaderMock::new();
+        let name = "test";
+
+        let task = Task{
+            name: name.to_string(),
+            column: Column::Todo,
+            description: Some(name.to_string())
+        };
+
+        store.return_from_get(task);
+        reader.return_from_read_when("fakeroute", "file contents");
+
+        view_item(
+            name.to_string(),
+            &mut store,
+            &mut writer,
+            &reader
+        );
+
+        let output = writer.get_ref();
+        assert_eq!(output, b"Error loading file for 'test'\n");
+
+    }
 }

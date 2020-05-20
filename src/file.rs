@@ -4,23 +4,29 @@ pub trait Reader {
     fn read(&self, path: &str) -> Option<String>;
 }
 
-pub struct FileReader {
-
-}
+pub struct FileReader;
 
 impl FileReader {
     pub fn new() -> FileReader {
-        FileReader{}
+        FileReader
     }
 }
 
 impl Reader for FileReader {
     fn read(&self, path: &str) -> Option<String> {
         let mut editable = String::new();
-        File::open(path)
-            .expect("Could not open file")
-            .read_to_string(&mut editable)
-            .expect("Could not read file");
+        let file_open_result = File::open(path);
+        if file_open_result.is_err() {
+            return None;
+        }
+
+        let read_result = file_open_result.unwrap()
+            .read_to_string(&mut editable);
+
+        if read_result.is_err() {
+            return None;
+
+        }
 
         Some(editable)
     }
