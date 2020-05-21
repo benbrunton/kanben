@@ -8,9 +8,11 @@ mod list;
 mod edit;
 mod view;
 mod standard_actions;
+mod now;
 use list::list_tasks;
 use edit::edit_item;
 use view::view_item;
+use now::now;
 use standard_actions::{
     add_item,
     start_item,
@@ -20,13 +22,13 @@ use standard_actions::{
 };
 
 pub fn handle(
-    cmd: Option<SubCommand>,
+    opts: Opts,
     store: &mut dyn Store,
     writer: &mut dyn Write,
     editor: &mut dyn Editor,
     file_reader: &dyn Reader,
 ) {
-    match cmd {
+    match opts.subcmd {
         None => list_tasks(store, writer),
         Some(SubCommand::Add(a)) => add_item(a.title, store),
         Some(SubCommand::Start(a)) => start_item(a.title, store),
@@ -40,7 +42,10 @@ pub fn handle(
         Some(SubCommand::Complete(a)) => complete_item(
             a.title, store
         ),
-        Some(SubCommand::ClearDone) => clear_done(store)
+        Some(SubCommand::ClearDone) => clear_done(store),
+        Some(SubCommand::Now) => now(
+            store, writer, opts.no_newlines
+        ),
     }
 }
 
@@ -67,9 +72,13 @@ mod tests {
             description: None
         };
 
-        let cmd = SubCommand::Add(item.clone());
+        let opts = Opts {
+            subcmd: Some(SubCommand::Add(item.clone())),
+            no_newlines: false
+        };
+
         handle(
-            Some(cmd),
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -89,9 +98,13 @@ mod tests {
             title: name.clone()
         };
 
-        let cmd = SubCommand::Add(item.clone());
+        let opts = Opts {
+            subcmd: Some(SubCommand::Add(item.clone())),
+            no_newlines: false
+        };
+
         handle(
-            Some(cmd),
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -106,9 +119,13 @@ mod tests {
         let mut store = StoreMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let opts = Opts {
+            subcmd: None,
+            no_newlines: false
+        };
 
         handle(
-            None,
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -130,9 +147,13 @@ mod tests {
             title: name.clone()
         };
 
-        let cmd = SubCommand::Delete(item.clone());
+        let opts = Opts {
+            subcmd: Some(SubCommand::Delete(item.clone())),
+            no_newlines: false
+        };
+
         handle(
-            Some(cmd),
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -177,8 +198,13 @@ mod tests {
             }),
         ));
 
+        let opts = Opts {
+            subcmd: Some(SubCommand::ClearDone),
+            no_newlines: false
+        };
+
         handle(
-            Some(SubCommand::ClearDone),
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -210,10 +236,13 @@ mod tests {
 
         store.return_from_get(task);
 
+        let opts = Opts {
+            subcmd: Some(SubCommand::Edit(item.clone())),
+            no_newlines: false
+        };
 
-        let cmd = SubCommand::Edit(item.clone());
         handle(
-            Some(cmd),
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -242,9 +271,12 @@ mod tests {
         store.return_from_get(task);
         reader.return_from_read("abcdef");
 
-        let cmd = SubCommand::View(item.clone());
+        let opts = Opts{
+            subcmd: Some(SubCommand::View(item.clone())),
+            no_newlines: false
+        };
         handle(
-            Some(cmd),
+            opts,
             &mut store,
             &mut writer,
             &mut editor,
@@ -253,6 +285,30 @@ mod tests {
 
         let output = writer.get_ref();
         assert_eq!(output, b"abcdef\n");
+    }
+
+    #[test]
+    fn it_outputs_nothing_when_there_are_no_tasks_for_now() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
+
+        let opts = Opts{
+            subcmd: Some(SubCommand::Now),
+            no_newlines: false
+        };
+
+        handle(
+            opts,
+            &mut store,
+            &mut writer,
+            &mut editor,
+            &reader
+        );
+
+        let output = writer.get_ref();
+        assert_eq!(output, b"");
     }
 
 }

@@ -6,6 +6,8 @@ use serde::{Serialize, Deserialize};
 pub struct Opts {
     #[clap(subcommand)]
     pub subcmd: Option<SubCommand>,
+    #[clap(short, long)]
+    pub no_newlines: bool
 }
 
 #[derive(Clap)]
@@ -24,6 +26,8 @@ pub enum SubCommand {
     Edit(Item),
     #[clap(about="View any additional information about a task")]
     View(Item),
+    #[clap(about="Outputs in-progress tasks")]
+    Now
 }
 
 #[derive(Clap, Clone, PartialEq)]

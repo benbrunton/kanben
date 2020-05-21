@@ -19,14 +19,17 @@ pub fn edit_item(
     }
 
     let mut task = task_result.unwrap();
-    match task.description {
-        Some(d) => editor.open(&d),
-        None => {
-            let result = editor.create(&key);
-            task.description = Some(result.unwrap().clone());
-            store.set(&key, task);
+    if task.description.is_some() {
+        let description = task.description.unwrap();
+        if description.trim() != "".to_string() {
+            editor.open(&description);
+            return;
         }
     }
+
+    let result = editor.create(&key);
+    task.description = Some(result.unwrap().clone());
+    store.set(&key, task);
 }
 
 #[cfg(test)]
@@ -121,6 +124,28 @@ mod tests {
         );
 
         assert!(store.set_called_with(&key, &new_task));
+    }
 
+    #[test]
+    fn when_a_path_is_empty_string_it_creates_a_new_file() {
+        let key = String::from("test");
+        let mut store = StoreMock::new();
+        let mut editor = EditorMock::new();
+        let mut writer = Cursor::new(vec!());
+        let task = Task{
+            name: key.clone(),
+            column: Column::Todo,
+            description: Some("".to_string())
+        };
+
+        store.return_from_get(task);
+        edit_item(
+            key.clone(),
+            &mut store,
+            &mut editor,
+            &mut writer
+        );
+
+        assert!(editor.create_called_with(&key));
     }
 }

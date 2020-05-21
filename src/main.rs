@@ -45,7 +45,7 @@ fn main() {
     let file_reader = FileReader::new();
 
     commands::handle(
-        opts.subcmd,
+        opts,
         &mut store,
         &mut writer,
         &mut editor,
