@@ -1,11 +1,12 @@
 use crate::opts::*;
 use crate::store::Store;
+use std::collections::HashMap;
 
 pub struct StoreMock {
     last_set_key: Option<String>,
     rm_calls: Vec<String>,
     last_set_task: Option<Task>,
-    tasks: Vec<Task>,
+    tasks: HashMap<String, Vec<Task>>,
 }
 
 impl StoreMock {
@@ -14,11 +15,11 @@ impl StoreMock {
             last_set_key: None,
             last_set_task: None,
             rm_calls: vec!(),
-            tasks: vec!()
+            tasks: HashMap::new()
         }
     }
 
-    pub fn set_called_with(&self, key: &str, task: &Task) -> bool {
+    pub fn set_called_with(&self, key: &str, task: &Task, _: &str) -> bool {
         if self.last_set_task.is_none()
             || self.last_set_key.is_none() {
             return false;
@@ -36,13 +37,17 @@ impl StoreMock {
         self.last_set_key.is_some()
     }
 
-    pub fn rm_called_with(&self, key: &str) -> bool {
+    pub fn rm_called_with(&self, key: &str, _: &str) -> bool {
         self.rm_calls.iter().any(|k| k == key)
     }
 
-    pub fn insert_tasks(&mut self, tasks: Vec<(&str, Task)>) {
-        self.tasks = tasks.iter()
-            .map(|(_, task)| task.clone()).collect();
+    pub fn insert_tasks(
+        &mut self,
+        tasks: Vec<(&str, Task)>,
+        bucket: &str
+    ) {
+        self.tasks.insert(bucket.to_string(), tasks.iter()
+            .map(|(_, task)| task.clone()).collect());
     }
 
     pub fn return_from_get(&mut self, task: Task) {
@@ -51,20 +56,21 @@ impl StoreMock {
 }
 
 impl Store for StoreMock {
-    fn get_all(&self) -> Vec<Task> {
-        self.tasks.clone()
+    fn get_all(&self, bucket: &str) -> Vec<Task> {
+        self.tasks.get(bucket)
+            .unwrap_or(&vec!()).clone()
     }
 
-    fn set(&mut self, key: &str, value: Task) {
+    fn set(&mut self, key: &str, value: Task, _: &str) {
         self.last_set_key = Some(String::from(key));
         self.last_set_task = Some(value); 
     }
 
-    fn get(&self, _key: &str) -> Option<Task> {
+    fn get(&self, _key: &str, _: &str) -> Option<Task> {
         self.last_set_task.clone()
     }
 
-    fn rm(&mut self, key: &str) {
+    fn rm(&mut self, key: &str, _: &str) {
         self.rm_calls.push(String::from(key));
     }
 }
@@ -83,9 +89,9 @@ mod tests {
             description: None
         };
 
-        store.set(&name, task.clone());
+        store.set(&name, task.clone(), "tasks");
 
-        assert!(store.set_called_with(&name, &task));
+        assert!(store.set_called_with(&name, &task, "tasks"));
     }
 
     #[test]
@@ -105,9 +111,9 @@ mod tests {
         };
 
 
-        store.set(&name, passed_task.clone());
+        store.set(&name, passed_task.clone(), "tasks");
 
-        assert!(!store.set_called_with(&name, &checked_task));
+        assert!(!store.set_called_with(&name, &checked_task, "tasks"));
     }
 
 
@@ -128,7 +134,7 @@ mod tests {
             description: None
         };
 
-        store.set(&name, task.clone());
+        store.set(&name, task.clone(), "tasks");
 
         assert!(store.set_called());
     }
@@ -143,25 +149,25 @@ mod tests {
             description: None
         };
 
-        store.insert_tasks(vec!((&name, task.clone())));
+        store.insert_tasks(vec!((&name, task.clone())), "tasks");
 
-        assert_eq!(store.get_all(), vec!(task.clone()));
+        assert_eq!(store.get_all("tasks"), vec!(task.clone()));
     }
 
     #[test]
     fn it_can_report_on_calls_to_rm() {
         let mut store = StoreMock::new();
-        store.rm("test");
-        assert!(store.rm_called_with("test"));
+        store.rm("test", "tasks");
+        assert!(store.rm_called_with("test", "tasks"));
     }
 
     #[test]
     fn it_can_report_multiple_calls_to_rm() {
         let mut store = StoreMock::new();
-        store.rm("test");
-        store.rm("test2");
-        assert!(store.rm_called_with("test"));
-        assert!(store.rm_called_with("test2"));
+        store.rm("test", "tasks");
+        store.rm("test2", "tasks");
+        assert!(store.rm_called_with("test", "tasks"));
+        assert!(store.rm_called_with("test2", "tasks"));
     }
 
     #[test]
@@ -175,6 +181,34 @@ mod tests {
 
         store.return_from_get(task.clone());
 
-        assert_eq!(store.get("test").unwrap(), task.clone());
+        assert_eq!(store.get("test", "tasks").unwrap(), task.clone());
     }
+
+    #[test]
+    fn it_gets_from_different_buckets() {
+        let mut store = StoreMock::new();
+        let name = String::from("test");
+        let task = Task {
+            name: String::from("fake test"),
+            column: Column::Doing,
+            description: None
+        };
+
+        let name2 = "test2".to_string();
+        let task2 = Task {
+            name: name2.clone(),
+            column: Column::Doing,
+            description: None 
+        };
+
+        store.insert_tasks(vec!((&name, task.clone())), "bucket1");
+        store.insert_tasks(vec!(
+            (&name, task.clone()),
+            (&name2, task2.clone()),
+        ), "bucket2");
+
+        assert_eq!(store.get_all("bucket1").len(), 1);
+        assert_eq!(store.get_all("bucket2").len(), 2);
+    }
+
 }

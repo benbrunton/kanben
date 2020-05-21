@@ -1,14 +1,14 @@
 use std::io::Write;
-use crate::store::Store;
+use crate::board::BoardAccess;
 use crate::file::Reader;
 
-pub fn view_item(
+pub fn view_item<B: BoardAccess>(
     key: String,
-    store: &mut dyn Store,
+    board: &mut B,
     writer: &mut dyn Write,
     reader: &dyn Reader
 ) {
-    let task_result = store.get(&key);
+    let task_result = board.get(&key);
 
     if task_result.is_none() {
         write!(
@@ -46,13 +46,13 @@ pub fn view_item(
 mod tests {
     use super::*;
     use crate::opts::{Task, Column};
-    use crate::test::{StoreMock, ReaderMock};
+    use crate::test::{BoardMock, ReaderMock};
     use std::io::Cursor;
 
     #[test]
     fn it_outputs_to_writer_from_reader() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut reader = ReaderMock::new();
         let name = "test".to_string();
 
@@ -62,12 +62,12 @@ mod tests {
             description: Some("test".to_string())
         };
 
-        store.return_from_get(task);
+        board.set(&name, task);
         reader.return_from_read("abcdef");
 
         view_item(
             name,
-            &mut store,
+            &mut board,
             &mut writer,
             &reader
         );
@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn it_opens_the_file_in_description() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut reader = ReaderMock::new();
         let name = "test";
 
@@ -89,12 +89,12 @@ mod tests {
             description: Some(name.to_string())
         };
 
-        store.return_from_get(task);
+        board.set(name, task);
         reader.return_from_read_when(name, "file contents");
 
         view_item(
             name.to_string(),
-            &mut store,
+            &mut board,
             &mut writer,
             &reader
         );
@@ -106,13 +106,13 @@ mod tests {
     #[test]
     fn it_outputs_a_message_when_no_task_exists() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let reader = ReaderMock::new();
         let name = "test";
 
         view_item(
             name.to_string(),
-            &mut store,
+            &mut board,
             &mut writer,
             &reader
         );
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn it_outputs_a_message_when_no_description_exists() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let reader = ReaderMock::new();
         let name = "test";
 
@@ -134,11 +134,11 @@ mod tests {
             description: None
         };
 
-        store.return_from_get(task);
+        board.set(name, task);
 
         view_item(
             name.to_string(),
-            &mut store,
+            &mut board,
             &mut writer,
             &reader
         );
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn it_outputs_a_message_when_description_file_fails_to_open() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut reader = ReaderMock::new();
         let name = "test";
 
@@ -161,12 +161,12 @@ mod tests {
             description: Some(name.to_string())
         };
 
-        store.return_from_get(task);
+        board.set(name, task);
         reader.return_from_read_when("fakeroute", "file contents");
 
         view_item(
             name.to_string(),
-            &mut store,
+            &mut board,
             &mut writer,
             &reader
         );

@@ -1,9 +1,9 @@
 use std::io::Write;
-use crate::store::Store;
+use crate::board::BoardAccess;
 use crate::opts::Column;
 
-pub fn now(
-    store: &dyn Store,
+pub fn now<B: BoardAccess>(
+    board: &B,
     writer: &mut dyn Write,
     no_newlines: bool
 ) {
@@ -14,7 +14,7 @@ pub fn now(
         "\n"
     };
 
-    let tasks = store.get_all()
+    let tasks = board.get_all_tasks()
         .iter()
         .filter(|item| item.column == Column::Doing)
         .map(|item| {
@@ -35,15 +35,15 @@ pub fn now(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{opts::Task, test::StoreMock};
+    use crate::{opts::Task, test::BoardMock};
     use std::{str, io::Cursor};
 
     #[test]
     fn it_outputs_the_kanban_headers_when_there_are_no_tasks() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        now(&mut store, &mut writer, false);
+        now(&mut board, &mut writer, false);
 
         let output = writer.get_ref();
         assert_eq!(output, b"");
@@ -52,38 +52,38 @@ mod tests {
     #[test]
     fn it_outputs_the_inprogress_task_when_it_exists() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task2", Task{
+            },
+            Task{
                 name: String::from("task2"),
                 column: Column::Todo,
                 description: None
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Done,
                 description: None
-            }),
+            },
         ));
 
 
-        now(&mut store, &mut writer, false);
+        now(&mut board, &mut writer, false);
 
         let output = writer.get_ref();
         assert_eq!(output, b"task1\n");
@@ -92,38 +92,38 @@ mod tests {
     #[test]
     fn it_omits_newlines_when_not_set() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task2", Task{
+            },
+            Task{
                 name: String::from("task2"),
                 column: Column::Todo,
                 description: None
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Done,
                 description: None
-            }),
+            },
         ));
 
 
-        now(&mut store, &mut writer, true);
+        now(&mut board, &mut writer, true);
 
         let output = writer.get_ref();
         assert_eq!(output, b"task1");
@@ -132,38 +132,38 @@ mod tests {
     #[test]
     fn it_delimits_multiple_tasks_by_newline_by_default() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task2", Task{
+            },
+            Task{
                 name: String::from("task2"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Done,
                 description: None
-            }),
+            },
         ));
 
 
-        now(&mut store, &mut writer, false);
+        now(&mut board, &mut writer, false);
 
         let output = writer.get_ref();
         assert_eq!(output, b"task1\ntask2\n");
@@ -172,38 +172,38 @@ mod tests {
     #[test]
     fn it_delimits_multiple_tasks_by_comma_when_no_newlines() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task2", Task{
+            },
+            Task{
                 name: String::from("task2"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Done,
                 description: None
-            }),
+            },
         ));
 
 
-        now(&mut store, &mut writer, true);
+        now(&mut board, &mut writer, true);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();

@@ -1,5 +1,5 @@
 use crate::opts::*;
-use crate::store::Store;
+use crate::board::BoardAccess;
 use crate::editor::Editor;
 use crate::file::Reader;
 use std::io::Write;
@@ -21,30 +21,30 @@ use standard_actions::{
     complete_item
 };
 
-pub fn handle(
+pub fn handle<B: BoardAccess>(
     opts: Opts,
-    store: &mut dyn Store,
+    board: &mut B,
     writer: &mut dyn Write,
     editor: &mut dyn Editor,
     file_reader: &dyn Reader,
 ) {
     match opts.subcmd {
-        None => list_tasks(store, writer),
-        Some(SubCommand::Add(a)) => add_item(a.title, store),
-        Some(SubCommand::Start(a)) => start_item(a.title, store),
-        Some(SubCommand::Delete(a)) => delete_item(a.title, store),
+        None => list_tasks(board, writer),
+        Some(SubCommand::Add(a)) => add_item(a.title, board),
+        Some(SubCommand::Start(a)) => start_item(a.title, board),
+        Some(SubCommand::Delete(a)) => delete_item(a.title, board),
         Some(SubCommand::Edit(a)) => edit_item(
-            a.title, store, editor, writer
+            a.title, board, editor, writer
         ),
         Some(SubCommand::View(a)) => view_item(
-            a.title, store, writer, file_reader
+            a.title, board, writer, file_reader
         ),
         Some(SubCommand::Complete(a)) => complete_item(
-            a.title, store
+            a.title, board
         ),
-        Some(SubCommand::ClearDone) => clear_done(store),
+        Some(SubCommand::ClearDone) => clear_done(board),
         Some(SubCommand::Now) => now(
-            store, writer, opts.no_newlines
+            board, writer, opts.no_newlines
         ),
     }
 }
@@ -52,24 +52,18 @@ pub fn handle(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{StoreMock, EditorMock, ReaderMock};
+    use crate::test::{BoardMock, EditorMock, ReaderMock};
     use std::io::Cursor;
 
     #[test]
     fn it_adds_a_new_item_to_the_store() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
-        };
-
-        let task = Task {
-            name: name.clone(),
-            column: Column::Todo,
-            description: None
         };
 
         let opts = Opts {
@@ -79,18 +73,18 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
         );
-        assert!(store.set_called_with(&name, &task));
+        assert!(board.create_task_called_with(&name));
     }
 
     #[test]
     fn it_doesnt_create_a_new_item_for_a_blank_key() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let name = String::from(" ");
@@ -105,18 +99,18 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
         );
-        assert!(!store.set_called());
+        assert!(!board.create_task_called_with(" "));
     }
 
     #[test]
     fn it_lists_tasks_when_no_command_is_passed() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let opts = Opts {
@@ -126,7 +120,7 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
@@ -139,7 +133,7 @@ mod tests {
     #[test]
     fn it_can_delete_an_item() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let name = String::from("test");
@@ -154,48 +148,48 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
         );
-        assert!(store.rm_called_with(&name));
+        assert!(board.remove_called_with(&name));
 
     }
 
     #[test]
     fn it_can_clear_done_column() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task2", Task{
+            },
+            Task{
                 name: String::from("task2"),
                 column: Column::Todo,
                 description: None
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Done,
                 description: None
-            }),
+            },
         ));
 
         let opts = Opts {
@@ -205,22 +199,22 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
         );
 
-        assert!(store.rm_called_with("task3"));
-        assert!(store.rm_called_with("task4"));
-        assert!(store.rm_called_with("task5"));
-        assert!(!store.rm_called_with("task1"));
+        assert!(board.remove_called_with("task3"));
+        assert!(board.remove_called_with("task4"));
+        assert!(board.remove_called_with("task5"));
+        assert!(!board.remove_called_with("task1"));
     }
 
     #[test]
     fn it_opens_an_editor_when_edit_command_is_passed() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let name = String::from("test");
@@ -234,7 +228,7 @@ mod tests {
             description: Some("test".to_string())
         };
 
-        store.return_from_get(task);
+        board.set(&name, task);
 
         let opts = Opts {
             subcmd: Some(SubCommand::Edit(item.clone())),
@@ -243,7 +237,7 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
@@ -254,7 +248,7 @@ mod tests {
     #[test]
     fn it_outputs_to_stdout_when_viewing_description() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut reader = ReaderMock::new();
         let name = String::from("test");
@@ -268,7 +262,7 @@ mod tests {
             description: Some("test".to_string())
         };
 
-        store.return_from_get(task);
+        board.set(&name, task);
         reader.return_from_read("abcdef");
 
         let opts = Opts{
@@ -277,7 +271,7 @@ mod tests {
         };
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader
@@ -290,7 +284,7 @@ mod tests {
     #[test]
     fn it_outputs_nothing_when_there_are_no_tasks_for_now() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
 
@@ -301,7 +295,7 @@ mod tests {
 
         handle(
             opts,
-            &mut store,
+            &mut board,
             &mut writer,
             &mut editor,
             &reader

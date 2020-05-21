@@ -1,14 +1,9 @@
-use crate::opts::{Task, Column};
-use crate::store::Store;
+use crate::opts::Column;
+use crate::board::BoardAccess;
 
-pub fn add_item(name: String, store: &mut dyn Store) {
+pub fn add_item<B: BoardAccess>(name: String, board: &mut B){
     if is_valid_key(&name) {
-        let new_item = Task {
-            name: String::from(&name),
-            column: Column::Todo,
-            description: None
-        };
-        store.set(&name, new_item);
+        board.create_task(&name);
     }
 }
 
@@ -16,26 +11,26 @@ fn is_valid_key(name: &str) -> bool {
     name.trim().len() > 0
 }
 
-pub fn start_item(name: String, store: &mut dyn Store) {
-    move_item(name, store, Column::Doing);
+pub fn start_item<B: BoardAccess>(name: String, board: &mut B) {
+    move_item(name, board, Column::Doing);
 }
 
-pub fn complete_item(name: String, store: &mut dyn Store) {
-    move_item(name, store, Column::Done);
+pub fn complete_item<B: BoardAccess>(name: String, board: &mut B) {
+    move_item(name, board, Column::Done);
 }
 
-fn move_item(name: String, store: &mut dyn Store, column: Column) {
-    let mut item = store.get(&name).unwrap();
+fn move_item<B: BoardAccess>(name: String, board: &mut B, column: Column) {
+    let mut item = board.get(&name).unwrap();
     item.column = column;
-    store.set(&name, item);
+    board.update(&name, item);
 }
 
-pub fn delete_item(name: String, store: &mut dyn Store) {
-    store.rm(&name);
+pub fn delete_item<B: BoardAccess>(name: String, board: &mut B) {
+    board.remove(&name);
 }
 
-pub fn clear_done(store: &mut dyn Store) {
-    store.get_all().iter().filter(|task| {
+pub fn clear_done<B: BoardAccess>(board: &mut B) {
+    board.get_all_tasks().iter().filter(|task| {
         task.column == Column::Done
-    }).for_each(|task| store.rm(&task.name));
+    }).for_each(|task| board.remove(&task.name));
 }

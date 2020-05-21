@@ -1,15 +1,17 @@
 use std::io::Write;
 use math::round;
-use crate::store::Store;
+use crate::board::BoardAccess;
 use crate::opts::Column;
 
-pub fn list_tasks(store: &dyn Store, writer: &mut dyn Write) {
+pub fn list_tasks<B: BoardAccess>(
+    board: &B, writer: &mut dyn Write
+) {
     writer.write(b"TODO:\t\t\tDOING:\t\t\tDONE:\n").unwrap();
     let mut todo = vec!();
     let mut doing = vec!();
     let mut done = vec!();
 
-    for value in store.get_all().iter() {
+    for value in board.get_all_tasks().iter() {
         match value.column {
             Column::Todo => todo.push(value.name.clone()),
             Column::Doing => doing.push(value.name.clone()),
@@ -63,15 +65,15 @@ fn find_col_max(cols: Vec<usize>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{opts::Task, test::StoreMock};
+    use crate::{opts::Task, test::BoardMock};
     use std::{str, io::Cursor};
 
     #[test]
     fn it_outputs_the_kanban_headers_when_there_are_no_tasks() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        list_tasks(&mut store, &mut writer);
+        list_tasks(&mut board, &mut writer);
 
         let output = writer.get_ref();
         assert_eq!(output, b"TODO:\t\t\tDOING:\t\t\tDONE:\n\n");
@@ -80,37 +82,37 @@ mod tests {
     #[test]
     fn it_sorts_into_rows() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1"),
                 column: Column::Doing,
                 description: None,
-            }),
-            ("task2", Task{
+            },
+            Task{
                 name: String::from("task2"),
                 column: Column::Todo,
                 description: None,
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Todo,
                 description: None
-            }),
+            },
         ));
 
-        list_tasks(&mut store, &mut writer);
+        list_tasks(&mut board, &mut writer);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();
@@ -123,17 +125,15 @@ task5\t\t\ttask3\t\t\t\n\n";
     #[test]
     fn it_displays_any_tasks_on_the_board() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None
-            }),
-        ));
+        board.set_tasks(vec!(Task{
+            name: String::from("task1"),
+            column: Column::Doing,
+            description: None
+        }));
 
-        list_tasks(&mut store, &mut writer);
+        list_tasks(&mut board, &mut writer);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();
@@ -145,37 +145,37 @@ task5\t\t\ttask3\t\t\t\n\n";
     #[test]
     fn it_takes_long_names_off_the_tabs() {
         let mut writer = Cursor::new(vec!());
-        let mut store = StoreMock::new();
+        let mut board = BoardMock::new();
 
-        store.insert_tasks(vec!(
-            ("task1", Task{
+        board.set_tasks(vec!(
+            Task{
                 name: String::from("task1-very-long"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task2-very-long", Task{
+            },
+            Task{
                 name: String::from("task2-very-long"),
                 column: Column::Todo,
                 description: None
-            }),
-            ("task3", Task{
+            },
+            Task{
                 name: String::from("task3"),
                 column: Column::Doing,
                 description: None
-            }),
-            ("task4", Task{
+            },
+            Task{
                 name: String::from("task4"),
                 column: Column::Done,
                 description: None
-            }),
-            ("task5", Task{
+            },
+            Task{
                 name: String::from("task5"),
                 column: Column::Todo,
                 description: None
-            }),
+            },
         ));
 
-        list_tasks(&mut store, &mut writer);
+        list_tasks(&mut board, &mut writer);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();

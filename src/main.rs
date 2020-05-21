@@ -7,6 +7,7 @@ mod opts;
 mod store;
 mod editor;
 mod file;
+mod board;
 
 #[cfg(test)]
 mod test;
@@ -15,6 +16,7 @@ use opts::Opts;
 use store::PersistantStore;
 use editor::FileEditor;
 use file::FileReader;
+use board::Board;
 
 fn main() {
     let _app = App::new("kanben");
@@ -22,6 +24,7 @@ fn main() {
     let opts: Opts = Opts::parse();
 
     let mut store = PersistantStore::new();
+    let mut board = Board::new(&mut store);
 
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
@@ -46,7 +49,7 @@ fn main() {
 
     commands::handle(
         opts,
-        &mut store,
+        &mut board,
         &mut writer,
         &mut editor,
         &file_reader
