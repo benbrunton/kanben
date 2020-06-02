@@ -3,7 +3,7 @@ use crate::opts::{Task, Column};
 
 pub trait BoardAccess {
     fn get_all_tasks(&self) -> Vec<Task>;
-    fn get_column(&self, column: Column) -> Vec<Task>;
+    fn get_column(&self, column: &str) -> Vec<Task>;
     fn create_task(&mut self, key: &str);
     fn update(&mut self, key: &str, task: Task);
     fn get(&self, key: &str) -> Option<Task>;
@@ -19,12 +19,13 @@ pub trait BoardAccess {
 // rm            ( <-- replaces existing functionality)
 // get via column
 // move between columns
+
 // reorder tasks
-pub struct Board<'a, S: Store> {
+pub struct Board<'a, S: Store<Task>> {
     store: &'a mut S
 }
 
-impl <'a, S: Store> Board<'a, S> {
+impl <'a, S: Store<Task>> Board<'a, S> {
     pub fn new(store: &'a mut S) -> Board<'a, S> {
         Board{
             store
@@ -32,13 +33,28 @@ impl <'a, S: Store> Board<'a, S> {
     }
 }
 
-impl <'a, S: Store> BoardAccess for Board<'a, S> {
+impl <'a, S: Store<Task>> BoardAccess for Board<'a, S> {
     fn get_all_tasks(&self) -> Vec<Task> {
-        self.store.get_all("tasks")
+        self.store.get_all()
     }
 
-    fn get_column(&self, _: Column) -> Vec<Task> {
+    fn get_column(&self, _column: &str) -> Vec<Task> {
         unimplemented!()
+/*
+        let list_result = self.store.get(
+            column, COLUMN_BUCKET_KEY
+        );
+
+        match list_result {
+            Some(StoreValue::List(x)) => {
+                x.iter().map(|key| {
+                    self.store.get(&key, TASK_BUCKET_KEY)
+                        .unwrap().task().unwrap()
+                }).collect::<Vec<Task>>()
+            },
+            _    => vec!()
+        }
+*/
     }
 
     fn create_task(&mut self, key: &str){
@@ -47,19 +63,22 @@ impl <'a, S: Store> BoardAccess for Board<'a, S> {
             column: Column::Todo,
             description: None
         };
-        self.store.set(key, task, "tasks");
+        self.store.set(
+            key,
+            task
+        );
     }
 
     fn get(&self, key: &str) -> Option<Task>{
-        self.store.get(key, "tasks")
+        self.store.get(key)
     }
 
     fn update(&mut self, key: &str, task: Task) {
-        self.store.set(key, task, "tasks")
+        self.store.set(key, task)
     }
 
     fn remove(&mut self, key: &str){
-        self.store.rm(key,"tasks")
+        self.store.rm(key)
     }
 }
 
@@ -73,7 +92,7 @@ mod tests {
     fn it_can_get_all_tasks() {
         let mut store = StoreMock::new();
 
-        store.insert_tasks(vec!(
+        store.bulk_insert(vec!(
             ("task1", Task{
                 name: String::from("task1"),
                 column: Column::Doing,
@@ -84,7 +103,7 @@ mod tests {
                 column: Column::Todo,
                 description: None,
             }),
-        ), "tasks");
+        ));
 
         let board = Board::new(&mut store);
 
@@ -105,7 +124,7 @@ mod tests {
             description: None
         };
 
-        assert!(store.set_called_with("test", &task, "tasks"));
+        assert!(store.set_called_with("test", &task));
     }
 
     #[test]
@@ -117,7 +136,7 @@ mod tests {
         };
 
         let mut store = StoreMock::new();
-        store.return_from_get(task.clone());
+        store.set("test", task.clone());
         let board = Board::new(&mut store);
 
         let returned_task = board.get("test");
@@ -132,7 +151,7 @@ mod tests {
 
         board.remove("test");
 
-        assert!(store.rm_called_with("test", "tasks"));
+        assert!(store.rm_called_with("test"));
     }
 
     #[test]
@@ -148,10 +167,8 @@ mod tests {
 
         board.update("test", task.clone());
 
-        assert!(store.set_called_with("test", &task, "tasks"));
+        assert!(store.set_called_with("test", &task));
     }
-
-
 
 /*
     #[test]
@@ -169,18 +186,22 @@ mod tests {
                 column: Column::Doing,
                 description: None,
             }),
-        ), "tasks");
+        ));
 
-        store.insert_keys(vec!(
-            (0, "task2"),
-            (1, "task1")
-        ), "doing");
+        store.bulk_insert(vec!(
+            ("doing", vec!(
+                    "task2".to_owned(),
+                    "task1".to_owned()
+                )
+            ),
+        ));
 
         let board = Board::new(&mut store);
 
-        let tasks = board.get_column(Column::Doing);
+        let tasks = board.get_column("doing");
 
         assert_eq!(tasks.len(), 2);
     }
 */
+
 }

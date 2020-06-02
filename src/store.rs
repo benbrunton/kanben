@@ -1,66 +1,55 @@
-use kv::{Store as KvStore, Config, Bucket, Json};
-use dirs::home_dir;
-use crate::opts::Task;
+use kv::{Bucket, Json, Codec};
 
-pub trait Store {
-    fn get_all(&self, bucket: &str) -> Vec<Task>;
-    fn get(&self, key: &str, bucket: &str) -> Option<Task>;
-    fn set(&mut self, key: &str, value: Task, bucket: &str);
-    fn rm(&mut self, key: &str, bucket: &str);
+pub trait Store <T>{
+    fn get_all(&self) -> Vec<T>;
+    fn get(&self, key: &str) -> Option<T>;
+    fn set(
+        &mut self,
+        key: &str,
+        value: T
+    );
+    fn rm(&mut self, key: &str);
 }
 
-pub struct PersistantStore {
-    kv_store: KvStore
+pub struct PersistantStore <'a, T: serde::Serialize + serde::de::DeserializeOwned> {
+    bucket: &'a Bucket<'a, String, Json<T>>
 }
 
-impl PersistantStore {
-    pub fn new() -> PersistantStore {
-        let home_path_bfr = home_dir().unwrap();
-        let home_path = home_path_bfr.to_str().unwrap();
-        let cfg_location = format!("{}{}", home_path, "/.kanben");
-        let cfg = Config::new(&cfg_location);
-        let kv_store = KvStore::new(cfg)
-            .expect("unable to open store");
+impl <'a, T: serde::Serialize + serde::de::DeserializeOwned> PersistantStore <'a, T> {
+    pub fn new(bucket: &'a Bucket<String, Json<T>>) -> PersistantStore<'a, T> {
 
-        PersistantStore{ kv_store }
-    }
-
-    fn get_bucket(&self, bucket_label: &str
-        ) -> Bucket<String, Json<Task>> {
-        self.kv_store.bucket::<String, Json<Task>>(
-            Some(bucket_label)
-        ).expect("unable to get bucket")
+        PersistantStore{ bucket }
     }
 }
 
-impl Store for PersistantStore {
-    fn get_all(&self, bucket_label: &str) -> Vec<Task> {
-        let bucket = self.get_bucket(bucket_label);
-        bucket.iter().map(|item| { 
+impl <'a, 
+    T: serde::Serialize + serde::de::DeserializeOwned
+> Store<T> for PersistantStore<'a, T> {
+    fn get_all(&self) -> Vec<T> {
+        self.bucket.iter().map(|item| { 
             let task = item.unwrap();
-            let json_value = task.value::<Json<Task>>().unwrap();
-            json_value.as_ref().to_owned()
+            let json_value = task.value::<Json<T>>().unwrap();
+            json_value.to_inner()
         }).collect()
     }
 
-    fn set(&mut self, key: &str, value: Task, bucket_label: &str) {
-        let bucket = self.get_bucket(bucket_label);
-        let _ = bucket.set(String::from(key), Json(value));
+    fn set(&mut self, key: &str, value: T) {
+        let _ = self.bucket.set(String::from(key), Json(value));
     }
 
-    fn get(&self, key: &str, bucket_label: &str) -> Option<Task> {
-        let bucket = self.get_bucket(bucket_label);
-        let item_result = bucket.get(String::from(key))
+    fn get(&self, key: &str) -> Option<T> {
+        let item_result = self.bucket.get(String::from(key))
             .expect("unable to connect to kv store");
         match item_result {
             None => None,
-            Some(x) => Some(x.as_ref().clone())
+            Some(x) => {
+                Some(x.to_inner())
+            }
         }
     }
 
-    fn rm(&mut self, key: &str, bucket_label: &str) {
-        let bucket = self.get_bucket(bucket_label);
-        let _ = bucket.remove(String::from(key));
+    fn rm(&mut self, key: &str) {
+        let _ = self.bucket.remove(String::from(key));
     }
 }
 

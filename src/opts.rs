@@ -48,4 +48,3 @@ pub enum Column {
     Doing,
     Done
 }
-

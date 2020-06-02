@@ -55,7 +55,7 @@ impl BoardAccess for BoardMock {
         self.tasks.clone()
     }
 
-    fn get_column(&self, _: Column) -> Vec<Task>{
+    fn get_column(&self, _: &str) -> Vec<Task>{
         unimplemented!()
     }
 
