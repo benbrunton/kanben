@@ -25,7 +25,6 @@ fn main() {
 
     let opts: Opts = Opts::parse();
 
-    // todo - multiple stores (maybe touching same kv)
     let home_path_bfr = home_dir().unwrap();
     let home_path = home_path_bfr.to_str().unwrap();
     let cfg_location = format!("{}{}", home_path, "/.kanben");
@@ -35,9 +34,14 @@ fn main() {
     let bucket = kv_store.bucket::<String, Json<opts::Task>>(
         Some("tasks")
     ).expect("unable to get bucket");
+    let col_bucket = kv_store.bucket::<String, Json<Vec<String>>>(
+        Some("tasks")
+    ).expect("unable to get bucket");
+
 
     let mut store = PersistantStore::new(&bucket);
-    let mut board = Board::new(&mut store);
+    let mut col_store = PersistantStore::new(&col_bucket);
+    let mut board = Board::new(&mut store, &mut col_store);
 
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
@@ -45,8 +49,6 @@ fn main() {
     let default_editor = var("EDITOR")
         .expect("no default editor found");
 
-    let home_path_bfr = home_dir().unwrap();
-    let home_path = home_path_bfr.to_str().unwrap();
     let root_file_path = format!(
         "{}{}",
         home_path,

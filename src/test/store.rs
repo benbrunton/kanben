@@ -5,7 +5,6 @@ use std::collections::HashMap;
 pub struct StoreMock<T> {
     is_set_called: bool,
     rm_calls: Vec<String>,
-    last_set_task: Option<T>,
     temp_store: HashMap<String, T>,
 }
 
@@ -13,7 +12,6 @@ impl <T: std::cmp::PartialEq + std::clone::Clone> StoreMock<T> {
     pub fn new() -> StoreMock<T>{
         StoreMock{
             is_set_called: false,
-            last_set_task: None,
             rm_calls: vec!(),
             temp_store: HashMap::new(),
         }
