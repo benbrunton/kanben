@@ -77,6 +77,10 @@ impl BoardAccess for BoardMock {
     fn remove(&mut self, key: &str){
         self.remove_tasks.push(key.to_string());
     }
+
+    fn reindex_columns(&mut self) -> Result<usize, ()> {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]

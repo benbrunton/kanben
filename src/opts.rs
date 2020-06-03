@@ -27,7 +27,9 @@ pub enum SubCommand {
     #[clap(about="View any additional information about a task")]
     View(Item),
     #[clap(about="Outputs in-progress tasks")]
-    Now
+    Now,
+    #[clap(about="Re-indexes columns")]
+    Reindex
 }
 
 #[derive(Clap, Clone, PartialEq)]

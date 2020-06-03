@@ -8,6 +8,7 @@ pub trait BoardAccess {
     fn update(&mut self, key: &str, task: Task);
     fn get(&self, key: &str) -> Option<Task>;
     fn remove(&mut self, key: &str);
+    fn reindex_columns(&mut self) -> Result<usize, ()>;
 }
 
 pub struct Board<'a, S: Store<Task>, C: Store<Vec<String>>> {
@@ -99,6 +100,14 @@ impl <
             },
             None => ()
         }
+    }
+
+    fn reindex_columns(&mut self) -> Result<usize, ()>{
+        let tasks = self.store.get_all();
+        for task in tasks.iter() {
+            self.add_to_column(&task.name, task.column.clone());
+        }
+        Ok(tasks.len())
     }
 }
 
@@ -290,4 +299,22 @@ mod tests {
         assert_eq!(tasks.len(), 2);
     }
 
+    #[test]
+    fn it_can_reindex_columns() {
+        let task = Task {
+            name: "test".to_string(),
+            column: Column::Doing,
+            description: None
+        };
+
+        let mut store = StoreMock::new();
+        store.set("test", task.clone());
+        let mut col_store = StoreMock::new();
+        let mut board = Board::new(&mut store, &mut col_store);
+
+        board.reindex_columns();
+
+        assert_eq!(col_store.get("doing").unwrap().len(), 1);
+
+    }
 }

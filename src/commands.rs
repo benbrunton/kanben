@@ -9,10 +9,12 @@ mod edit;
 mod view;
 mod standard_actions;
 mod now;
+mod reindex;
 use list::list_tasks;
 use edit::edit_item;
 use view::view_item;
 use now::now;
+use reindex::reindex;
 use standard_actions::{
     add_item,
     start_item,
@@ -46,6 +48,9 @@ pub fn handle<B: BoardAccess>(
         Some(SubCommand::Now) => now(
             board, writer, opts.no_newlines
         ),
+        Some(SubCommand::Reindex) => reindex(
+            board, writer
+        )
     }
 }
 

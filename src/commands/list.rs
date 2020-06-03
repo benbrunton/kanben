@@ -1,19 +1,15 @@
 use std::io::Write;
 use math::round;
 use crate::board::BoardAccess;
-use crate::opts::{Task, Column};
+use crate::opts::Task;
 
 pub fn list_tasks<B: BoardAccess>(
     board: &B, writer: &mut dyn Write
 ) {
     writer.write(b"TODO:\t\t\tDOING:\t\t\tDONE:\n").unwrap();
-    let get_name = |t: &Task| t.name.clone();
-    let todo: Vec<String> = board.get_column("todo")
-        .iter().map(get_name).collect();
-    let doing: Vec<String> = board.get_column("doing")
-        .iter().map(get_name).collect();
-    let done: Vec<String> = board.get_column("done")
-        .iter().map(get_name).collect();
+    let todo = get_task_labels(board.get_column("todo"));
+    let doing = get_task_labels(board.get_column("doing"));
+    let done = get_task_labels(board.get_column("done"));
 
     let col_max = find_col_max(vec![
         todo.len(),
@@ -33,6 +29,10 @@ pub fn list_tasks<B: BoardAccess>(
         write!(writer, "\n").unwrap();
     }
     write!(writer, "\n").unwrap();
+}
+
+fn get_task_labels(list: Vec<Task>) -> Vec<String> {
+    list.iter().map(|t: &Task| t.name.clone()).collect()
 }
 
 fn col_text(label: Option<&String>) -> String {
@@ -61,7 +61,7 @@ fn find_col_max(cols: Vec<usize>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test::StoreMock, board::Board};
+    use crate::{test::StoreMock, board::Board, opts::Column};
     use std::{str, io::Cursor};
 
     #[test]
