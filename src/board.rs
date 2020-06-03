@@ -93,7 +93,7 @@ impl <
                 let col_label = self.get_column_label(task.column);
                 let mut col = self.get_column_list(&col_label);
                 let index = col.binary_search(&key.to_owned())
-                    .unwrap();
+                    .expect("can't find in column");
                 col.remove(index);
                 self.column_store.set(&col_label, col);
                 self.store.rm(key)
@@ -103,6 +103,9 @@ impl <
     }
 
     fn reindex_columns(&mut self) -> Result<usize, ()>{
+        self.column_store.set("todo", vec!());
+        self.column_store.set("doing", vec!());
+        self.column_store.set("done", vec!());
         let tasks = self.store.get_all();
         for task in tasks.iter() {
             self.add_to_column(&task.name, task.column.clone());

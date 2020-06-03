@@ -26,10 +26,13 @@ impl <'a,
     T: serde::Serialize + serde::de::DeserializeOwned
 > Store<T> for PersistantStore<'a, T> {
     fn get_all(&self) -> Vec<T> {
-        self.bucket.iter().map(|item| { 
-            let task = item.unwrap();
-            let json_value = task.value::<Json<T>>().unwrap();
-            json_value.to_inner()
+        self.bucket.iter().filter_map(|item| { 
+            let task = item.expect("unable to get item");
+            let json_value_result = task.value::<Json<T>>();
+            match json_value_result {
+                Ok(v) => Some(v.to_inner()),
+                Err(_) => None
+            }
         }).collect()
     }
 
