@@ -29,7 +29,9 @@ pub enum SubCommand {
     #[clap(about="Outputs in-progress tasks")]
     Now,
     #[clap(about="Re-indexes columns")]
-    Reindex
+    Reindex,
+    #[clap(about="moves task to top of priorities")]
+    Top(Item)
 }
 
 #[derive(Clap, Clone, PartialEq)]

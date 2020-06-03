@@ -20,7 +20,8 @@ use standard_actions::{
     start_item,
     delete_item,
     clear_done,
-    complete_item
+    complete_item,
+    top
 };
 
 pub fn handle<B: BoardAccess>(
@@ -50,7 +51,9 @@ pub fn handle<B: BoardAccess>(
         ),
         Some(SubCommand::Reindex) => reindex(
             board, writer
-        )
+        ),
+        Some(SubCommand::Top(a)) => top(a.title, board)
+        
     }
 }
 

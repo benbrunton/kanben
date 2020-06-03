@@ -34,3 +34,7 @@ pub fn clear_done<B: BoardAccess>(board: &mut B) {
         task.column == Column::Done
     }).for_each(|task| board.remove(&task.name));
 }
+
+pub fn top<B: BoardAccess>(name: String, board: &mut B) {
+    board.top_priority(&name);
+}

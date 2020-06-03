@@ -81,6 +81,10 @@ impl BoardAccess for BoardMock {
     fn reindex_columns(&mut self) -> Result<usize, ()> {
         unimplemented!()
     }
+
+    fn top_priority(&mut self, key: &str) {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]

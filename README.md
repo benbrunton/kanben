@@ -19,7 +19,6 @@ kanben now              # outputs in-progress tasks
 ```
 
 ## Roadmap
-- re-index
 - timestamp with option to display
 - optional config buckets
 - split task into sub-tasks

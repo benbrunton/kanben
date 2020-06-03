@@ -9,6 +9,7 @@ pub trait BoardAccess {
     fn get(&self, key: &str) -> Option<Task>;
     fn remove(&mut self, key: &str);
     fn reindex_columns(&mut self) -> Result<usize, ()>;
+    fn top_priority(&mut self, key: &str);
 }
 
 pub struct Board<'a, S: Store<Task>, C: Store<Vec<String>>> {
@@ -111,6 +112,22 @@ impl <
             self.add_to_column(&task.name, task.column.clone());
         }
         Ok(tasks.len())
+    }
+
+    fn top_priority(&mut self, key: &str) {
+        let task_result = self.store.get(key);
+        match task_result {
+            Some(task) => {
+                let label = self.get_column_label(task.column);
+                let mut col = self.get_column_list(&label);
+                let index = col.binary_search(&key.to_owned())
+                    .expect("can't find in column");
+                col.remove(index);
+                col.insert(0, task.name.clone());
+                self.column_store.set(&label, col);
+            },
+            _ => ()
+        }
     }
 }
 
@@ -319,5 +336,85 @@ mod tests {
 
         assert_eq!(col_store.get("doing").unwrap().len(), 1);
 
+    }
+
+    #[test]
+    fn it_can_make_an_item_top_priority() {
+        let mut store = StoreMock::new();
+
+        store.bulk_insert(vec!(
+            ("task1", Task{
+                name: String::from("task1"),
+                column: Column::Doing,
+                description: None,
+            }),
+            ("task2", Task{
+                name: String::from("task2"),
+                column: Column::Doing,
+                description: None,
+            }),
+            ("task4", Task{
+                name: String::from("task2"),
+                column: Column::Todo,
+                description: None,
+            })
+        ));
+
+        let mut col_store = StoreMock::new();
+        col_store.bulk_insert(vec!(
+            ("doing", vec!(
+                    "task2".to_owned(),
+                    "task1".to_owned()
+                )
+            ),
+        ));
+
+        let mut board = Board::new(&mut store, &mut col_store);
+        board.top_priority("task1");
+        let col = board.get_column("doing");
+        let task1 = col.get(0).unwrap();
+        assert_eq!(&task1.name, "task1");
+    }
+
+    #[test]
+    fn it_can_move_an_item_after_making_it_priority() {
+        // there was a bug with this previously
+        let mut store = StoreMock::new();
+
+        store.bulk_insert(vec!(
+            ("task1", Task{
+                name: String::from("task1"),
+                column: Column::Doing,
+                description: None,
+            }),
+            ("task2", Task{
+                name: String::from("task2"),
+                column: Column::Doing,
+                description: None,
+            }),
+            ("task4", Task{
+                name: String::from("task2"),
+                column: Column::Todo,
+                description: None,
+            })
+        ));
+
+        let mut col_store = StoreMock::new();
+        col_store.bulk_insert(vec!(
+            ("doing", vec!(
+                    "task2".to_owned(),
+                    "task1".to_owned()
+                )
+            ),
+        ));
+
+        let mut board = Board::new(&mut store, &mut col_store);
+        board.top_priority("task1");
+        board.update("task1", Task{
+            name: "task1".to_owned(),
+            column: Column::Done,
+            description: None
+        });
+        assert_eq!(board.get_column("done").len(), 1);
     }
 }
