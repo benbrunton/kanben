@@ -56,7 +56,7 @@ impl BoardAccess for BoardMock {
     }
 
     fn get_column(&self, _: &str) -> Vec<Task>{
-        unimplemented!()
+        vec!()
     }
 
     fn create_task(&mut self, key: &str){

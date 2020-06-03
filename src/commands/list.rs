@@ -1,23 +1,19 @@
 use std::io::Write;
 use math::round;
 use crate::board::BoardAccess;
-use crate::opts::Column;
+use crate::opts::{Task, Column};
 
 pub fn list_tasks<B: BoardAccess>(
     board: &B, writer: &mut dyn Write
 ) {
     writer.write(b"TODO:\t\t\tDOING:\t\t\tDONE:\n").unwrap();
-    let mut todo = vec!();
-    let mut doing = vec!();
-    let mut done = vec!();
-
-    for value in board.get_all_tasks().iter() {
-        match value.column {
-            Column::Todo => todo.push(value.name.clone()),
-            Column::Doing => doing.push(value.name.clone()),
-            Column::Done => done.push(value.name.clone()),
-        }
-    }
+    let get_name = |t: &Task| t.name.clone();
+    let todo: Vec<String> = board.get_column("todo")
+        .iter().map(get_name).collect();
+    let doing: Vec<String> = board.get_column("doing")
+        .iter().map(get_name).collect();
+    let done: Vec<String> = board.get_column("done")
+        .iter().map(get_name).collect();
 
     let col_max = find_col_max(vec![
         todo.len(),
@@ -65,13 +61,15 @@ fn find_col_max(cols: Vec<usize>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{opts::Task, test::BoardMock};
+    use crate::{test::StoreMock, board::Board};
     use std::{str, io::Cursor};
 
     #[test]
     fn it_outputs_the_kanban_headers_when_there_are_no_tasks() {
         let mut writer = Cursor::new(vec!());
-        let mut board = BoardMock::new();
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut board = Board::new(&mut store, &mut col_store);
 
         list_tasks(&mut board, &mut writer);
 
@@ -82,35 +80,20 @@ mod tests {
     #[test]
     fn it_sorts_into_rows() {
         let mut writer = Cursor::new(vec!());
-        let mut board = BoardMock::new();
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut board = Board::new(&mut store, &mut col_store);
 
-        board.set_tasks(vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None,
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None,
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Todo,
-                description: None
-            },
-        ));
+        board.create_task("task1");
+        board.create_task("task2");
+        board.create_task("task3");
+        board.create_task("task4");
+        board.create_task("task5");
+
+        board.update("task4", get_task("task4", Column::Done));
+        board.update("task1", get_task("task1", Column::Doing));
+        board.update("task3", get_task("task3", Column::Doing));
+
 
         list_tasks(&mut board, &mut writer);
 
@@ -125,13 +108,12 @@ task5\t\t\ttask3\t\t\t\n\n";
     #[test]
     fn it_displays_any_tasks_on_the_board() {
         let mut writer = Cursor::new(vec!());
-        let mut board = BoardMock::new();
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut board = Board::new(&mut store, &mut col_store);
 
-        board.set_tasks(vec!(Task{
-            name: String::from("task1"),
-            column: Column::Doing,
-            description: None
-        }));
+        board.create_task("task1");
+        board.update("task1", get_task("task1", Column::Doing));
 
         list_tasks(&mut board, &mut writer);
 
@@ -145,35 +127,20 @@ task5\t\t\ttask3\t\t\t\n\n";
     #[test]
     fn it_takes_long_names_off_the_tabs() {
         let mut writer = Cursor::new(vec!());
-        let mut board = BoardMock::new();
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut board = Board::new(&mut store, &mut col_store);
+        board.create_task("task1-very-long");
+        board.create_task("task2-very-long");
+        board.create_task("task3");
+        board.create_task("task4");
+        board.create_task("task5");
 
-        board.set_tasks(vec!(
-            Task{
-                name: String::from("task1-very-long"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task2-very-long"),
-                column: Column::Todo,
-                description: None
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Todo,
-                description: None
-            },
-        ));
+        board.update("task1-very-long",
+            get_task("task1-very-long", Column::Doing)
+        );
+        board.update("task3", get_task("task3", Column::Doing));
+        board.update("task4", get_task("task4", Column::Done));
 
         list_tasks(&mut board, &mut writer);
 
@@ -183,5 +150,13 @@ task5\t\t\ttask3\t\t\t\n\n";
 task2-very-long\t\ttask1-very-long\t\ttask4
 task5\t\t\ttask3\t\t\t\n\n";
         assert_eq!(str_output, expected_output);
+    }
+
+    fn get_task(name: &str, column: Column) -> Task {
+        Task{
+            name: name.to_owned(),
+            column,
+            description: None
+        }
     }
 }

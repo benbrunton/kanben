@@ -30,21 +30,30 @@ impl <
 
     fn add_to_column(&mut self, key: &str, column: Column) {
         let label = self.get_column_label(column);
-        let mut list = match self.column_store.get(&label) {
+        let mut list = self.get_column_list(&label);
+        list.push(key.to_owned());
+        self.column_store.set(&label, list);
+    }
+
+    fn get_column_list(&self, label: &str) -> Vec<String> {
+        match self.column_store.get(label) {
             Some(x) => x,
             _       => vec!()
-        };
-        list.push(key.to_owned());
-        self.column_store.set(
-            &label,
-            list
-        );
+        }
     }
 
     fn get_column_label(&self, column: Column) -> String {
         let mut label = format!("{:?}", column);
         label.make_ascii_lowercase();
         label
+    }
+
+    fn get_new_task(&self, key: &str) -> Task {
+        Task{
+            name: key.to_owned(),
+            column: Column::Todo,
+            description: None
+        }
     }
 }
 
@@ -56,30 +65,14 @@ impl <
     }
 
     fn get_column(&self, column: &str) -> Vec<Task> {
-        let list_result = self.column_store.get(column);
-
-        match list_result {
-            Some(x) => {
-                x.iter().map(|key| {
-                    self.store.get(&key)
-                        .unwrap()
-                }).collect()
-            },
-            _    => vec!()
-        }
+        let list = self.get_column_list(column);
+        list.iter().map(|key| self.store.get(&key).unwrap())
+            .collect()
     }
 
     fn create_task(&mut self, key: &str){
-        let task = Task{
-            name: key.to_string(),
-            column: Column::Todo,
-            description: None
-        };
-        self.store.set(
-            key,
-            task
-        );
-
+        let task = self.get_new_task(key);
+        self.store.set(key, task);
         self.add_to_column(key, Column::Todo);
     }
 
@@ -96,10 +89,8 @@ impl <
     fn remove(&mut self, key: &str){
         match self.store.get(key) {
             Some(task) => {
-                let mut col_label = format!("{:?}", task.column);
-                col_label.make_ascii_lowercase();
-                let mut col = self.column_store.get(&col_label)
-                    .unwrap();
+                let col_label = self.get_column_label(task.column);
+                let mut col = self.get_column_list(&col_label);
                 let index = col.binary_search(&key.to_owned())
                     .unwrap();
                 col.remove(index);
