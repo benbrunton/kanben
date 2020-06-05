@@ -2,6 +2,7 @@ use std::io::Write;
 use crate::board::BoardAccess;
 use crate::file::Reader;
 use colored::*;
+use termimad;
 
 pub fn view_item<B: BoardAccess>(
     key: String,
@@ -23,12 +24,14 @@ pub fn view_item<B: BoardAccess>(
     let task = task_result.unwrap();
 
     if task.tags.is_some() {
-        let tags = task.tags.unwrap();
-        let tag_str = format!("tags: {}\n", tags.join(", "));
+        let tags = task.tags.unwrap()
+            .iter()
+            .map(|s| format!("#{}", s))
+            .collect::<Vec<String>>().join(", ");
         write!(
             writer,
-            "{}",
-            tag_str.bold()
+            "{}\n\n",
+            tags.cyan()
         ).unwrap();
     }
 
@@ -51,7 +54,9 @@ pub fn view_item<B: BoardAccess>(
         return;
     }
 
-    write!(writer, "{}\n", read_result.unwrap()).unwrap();
+    let file_contents = read_result.unwrap();
+    let parsed_markdown = termimad::inline(&file_contents);
+    write!(writer, "{}\n", parsed_markdown).unwrap();
 }
 
 #[cfg(test)]
@@ -197,8 +202,8 @@ mod tests {
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();
         let expected = format!(
-            "{}{}", 
-            "tags: tag1\n".bold(),
+            "{}\n\n{}", 
+            "#tag1".cyan(),
             "file contents\n"
         );
         assert_eq!(str_output, &expected);
