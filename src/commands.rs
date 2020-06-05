@@ -35,7 +35,9 @@ pub fn handle<B: BoardAccess, W: Write>(
 ) {
     match opts.subcmd {
         None => list_tasks(opts.tag, board, writer),
-        Some(SubCommand::Add(a)) => add_item(a.title, board),
+        Some(SubCommand::Add(a)) => add_item(
+            a.title, a.tag, board
+        ),
         Some(SubCommand::Start(a)) => start_item(a.title, board),
         Some(SubCommand::Delete(a)) => delete_item(a.title, board),
         Some(SubCommand::Edit(a)) => edit_item(

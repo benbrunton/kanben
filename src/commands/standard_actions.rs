@@ -1,9 +1,13 @@
 use crate::opts::Column;
 use crate::board::BoardAccess;
 
-pub fn add_item<B: BoardAccess>(name: String, board: &mut B){
+pub fn add_item<B: BoardAccess>(
+    name: String,
+    tag: Option<String>,
+    board: &mut B
+){
     if is_valid_key(&name) {
-        board.create_task(&name, None);
+        board.create_task(&name, tag);
     }
 }
 
