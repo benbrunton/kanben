@@ -5,6 +5,7 @@ use crate::opts::Task;
 pub fn tag<B: BoardAccess, W: Write>(
     key: &str,
     tag_label: Option<String>,
+    remove: bool,
     board: &mut B,
     writer: &mut W
 ) {
@@ -21,7 +22,11 @@ pub fn tag<B: BoardAccess, W: Write>(
 
     match tag_label {
         None => view_tags(task, writer),
-        Some(t) => add_tag(task, t, board)
+        Some(t) => if remove { 
+            remove_tag(task, t, board)
+        } else {
+            add_tag(task, t, board)
+        }
     }
 }
 
@@ -49,6 +54,26 @@ fn add_tag<B: BoardAccess>(
     board.update(&task.name, new_task);
 }
 
+fn remove_tag<B: BoardAccess>(
+    task: Task,
+    tag: String,
+    board: &mut B
+) {
+    let mut new_task = task.clone();
+    match new_task.tags {
+        Some(l) => {
+            let new_list = l
+                .iter()
+                .filter(|&x| x != &tag)
+                .map(|x| x.clone())
+                .collect();
+            new_task.tags = Some(new_list);
+            board.update(&task.name, new_task);
+        },
+        None => ()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,7 +99,7 @@ mod tests {
             &mut tag_store
         );
 
-        tag("task", None, &mut board, &mut writer);
+        tag("task", None, false, &mut board, &mut writer);
 
         let output = writer.get_ref();
         assert_eq!(output, b"tag1\n");
@@ -95,7 +120,7 @@ mod tests {
             &mut tag_store
         );
 
-        tag("task", None, &mut board, &mut writer);
+        tag("task", None, false, &mut board, &mut writer);
 
         let output = writer.get_ref();
         assert_eq!(output, b"[No tags]\n");
@@ -120,7 +145,7 @@ mod tests {
             &mut tag_store
         );
 
-        tag("task", None, &mut board, &mut writer);
+        tag("task", None, false, &mut board, &mut writer);
 
         let output = writer.get_ref();
         assert_eq!(output, b"tag1, tag2\n");
@@ -139,7 +164,7 @@ mod tests {
         );
 
 
-        tag("task", None, &mut board, &mut writer);
+        tag("task", None, false, &mut board, &mut writer);
 
         let output = writer.get_ref();
         assert_eq!(output, b"No task called 'task' found.\n");
@@ -161,7 +186,7 @@ mod tests {
         board.create_task("task");
         let tag_label = Some("tag".to_string());
 
-        tag("task", tag_label, &mut board, &mut writer);
+        tag("task", tag_label, false, &mut board, &mut writer);
 
         let changed_task = store.get("task").unwrap();
 
@@ -185,7 +210,7 @@ mod tests {
         board.create_task("task");
         let tag_label = Some("tag".to_string());
 
-        tag("task", tag_label, &mut board, &mut writer);
+        tag("task", tag_label, false, &mut board, &mut writer);
 
         let tag_index = tag_store.get("tag").unwrap();
 
@@ -194,6 +219,45 @@ mod tests {
             vec!("task".to_string())
         );
     }
+
+    #[test]
+    fn it_removes_tags_when_flag_is_passed() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+        board.create_task("task");
+        let tag_label = Some("tag".to_string());
+
+        tag(
+            "task",
+            tag_label.clone(),
+            false,
+            &mut board,
+            &mut writer
+        );
+        tag(
+            "task",
+            tag_label.clone(),
+            true,
+            &mut board,
+            &mut writer
+        );
+
+        let tag_index = tag_store.get("tag").unwrap();
+        let expected_list: Vec<String> = vec!();
+
+        assert_eq!(
+            tag_index,
+            expected_list
+        );
+    }
+
 
     fn get_task(key: &str, column: Column) -> Task {
         Task {

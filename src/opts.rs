@@ -6,8 +6,8 @@ use serde::{Serialize, Deserialize};
 pub struct Opts {
     #[clap(subcommand)]
     pub subcmd: Option<SubCommand>,
-    #[clap(short, long)]
-    pub no_newlines: bool
+    #[clap(short, long, about="supress newlines in output")]
+    pub no_newlines: bool,
 }
 
 #[derive(Clap)]
@@ -38,13 +38,18 @@ pub enum SubCommand {
 
 #[derive(Clap, Clone, PartialEq)]
 pub struct Item {
+    #[clap(about="Name of task")]
     pub title: String
 }
 
 #[derive(Clap, Clone, PartialEq)]
 pub struct TagItem {
+    #[clap(about="Name of task")]
     pub title: String,
-    pub tag: Option<String>
+    #[clap(about="Name of tag")]
+    pub tag: Option<String>,
+    #[clap(short, long, about="remove tag")]
+    pub remove: bool
 }
 
 

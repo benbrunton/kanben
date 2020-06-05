@@ -53,12 +53,12 @@ impl <
         label
     }
 
-    fn find_in_column(
+    fn find_in_list(
         &self,
         key: &str,
-        column: &Vec<String>
+        list: &Vec<String>
     ) -> Option<usize> {
-        column.iter().position(|x| x == key)
+        list.iter().position(|x| x == key)
     }
 
     fn get_new_task(&self, key: &str) -> Task {
@@ -77,8 +77,23 @@ impl <
     ) -> (Vec<String>, Vec<String>) {
         let mut add_tags = vec!();
         let mut rm_tags = vec!();
+        let new_tags = new_tags.unwrap_or(vec!());
         if old_tags.is_none() {
-            add_tags = new_tags.unwrap_or(vec!());
+            add_tags = new_tags;
+        } else {
+            let old_tags = old_tags.unwrap(); 
+            // todo extract
+            for tag in old_tags.iter() {
+                if !new_tags.iter().any(|i| i == tag ){
+                    rm_tags.push(tag.clone());
+                }
+            }
+
+            for tag in new_tags.iter() {
+                if !old_tags.iter().any(|i| i == tag) {
+                    add_tags.push(tag.clone());
+                }
+            }
         }
 
         (add_tags, rm_tags)
@@ -93,6 +108,23 @@ impl <
             self.tag_store.set(&tag, tag_list);
         }
     }
+
+    fn rm_tag_index(&mut self, tags: Vec<String>, key: &str) {
+        for tag in tags {
+            let mut tag_list = self.tag_store.get(&tag)
+                .unwrap_or(vec!());
+            let index = self.find_in_list(key, &tag_list)
+                .expect(
+                    &format!(
+                        "can't find '{}' in list '{:?}'",
+                        tag, tag_list
+                    )
+                );
+            tag_list.remove(index);
+            self.tag_store.set(&tag, tag_list);
+        }
+    }
+
 }
 
 impl <
@@ -135,7 +167,7 @@ impl <
         );
 
         self.index_tags(add_tags, key);
-//        self.rm_tag_index(rm_tags, key);
+        self.rm_tag_index(rm_tags, key);
 
         self.remove(key);
         self.store.set(key, task.clone());
@@ -147,7 +179,7 @@ impl <
             Some(task) => {
                 let col_label = self.get_column_label(task.column);
                 let mut col = self.get_column_list(&col_label);
-                let index = self.find_in_column(key, &col)
+                let index = self.find_in_list(key, &col)
                     .expect(
                         &format!(
                             "can't find '{}' in column '{}'",
@@ -179,7 +211,7 @@ impl <
             Some(task) => {
                 let label = self.get_column_label(task.column);
                 let mut col = self.get_column_list(&label);
-                let index = self.find_in_column(key, &col)
+                let index = self.find_in_list(key, &col)
                     .expect(
                         &format!(
                             "can't find '{}' in column '{}'",
@@ -211,7 +243,7 @@ mod tests {
         ));
         let mut col_store = StoreMock::new();
         let mut tag_store = StoreMock::new();
-        let mut board = Board::new(
+        let board = Board::new(
             &mut store,
             &mut col_store,
             &mut tag_store
@@ -287,7 +319,7 @@ mod tests {
         store.set("test", task.clone());
         let mut col_store = StoreMock::new();
         let mut tag_store = StoreMock::new();
-        let mut board = Board::new(
+        let board = Board::new(
             &mut store,
             &mut col_store,
             &mut tag_store
@@ -387,7 +419,7 @@ mod tests {
         ));
 
         let mut tag_store = StoreMock::new();
-        let mut board = Board::new(
+        let board = Board::new(
             &mut store,
             &mut col_store,
             &mut tag_store
@@ -411,7 +443,7 @@ mod tests {
             &mut tag_store
         );
 
-        board.reindex_columns();
+        let _ = board.reindex_columns();
 
         assert_eq!(col_store.get("doing").unwrap().len(), 1);
 
@@ -582,6 +614,36 @@ mod tests {
             vec!("task".to_owned())
         );
     }
+
+    #[test]
+    fn it_removes_old_tags() {
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        tag_store.set("tag", vec!("task".to_owned()));
+        col_store.set("todo", vec!("task".to_owned()));
+        let mut task = get_task("task", Column::Todo);
+        task.tags = Some(vec!("tag".to_owned()));
+        store.set("task", task);
+
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
+        let new_task = get_task("task", Column::Todo);
+        board.update("task", new_task);
+
+        let tag_index = tag_store.get("tag").unwrap();
+        let expected_list: Vec<String> = vec!();
+
+        assert_eq!(
+            tag_index,
+            expected_list
+        );
+    }
+
 
     fn get_task(key: &str, column: Column) -> Task {
         Task {

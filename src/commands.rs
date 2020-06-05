@@ -56,7 +56,7 @@ pub fn handle<B: BoardAccess, W: Write>(
         ),
         Some(SubCommand::Top(a)) => top(a.title, board),
         Some(SubCommand::Tag(a)) => tag(
-            &a.title, a.tag, board, writer
+            &a.title, a.tag, a.remove, board, writer
         )
     }
 }
@@ -80,7 +80,7 @@ mod tests {
 
         let opts = Opts {
             subcmd: Some(SubCommand::Add(item.clone())),
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
@@ -106,7 +106,7 @@ mod tests {
 
         let opts = Opts {
             subcmd: Some(SubCommand::Add(item.clone())),
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
@@ -127,7 +127,7 @@ mod tests {
         let reader = ReaderMock::new();
         let opts = Opts {
             subcmd: None,
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
@@ -155,7 +155,7 @@ mod tests {
 
         let opts = Opts {
             subcmd: Some(SubCommand::Delete(item.clone())),
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
@@ -186,7 +186,7 @@ mod tests {
 
         let opts = Opts {
             subcmd: Some(SubCommand::ClearDone),
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
@@ -221,7 +221,7 @@ mod tests {
 
         let opts = Opts {
             subcmd: Some(SubCommand::Edit(item.clone())),
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
@@ -253,7 +253,7 @@ mod tests {
 
         let opts = Opts{
             subcmd: Some(SubCommand::View(item.clone())),
-            no_newlines: false
+            no_newlines: false,
         };
         handle(
             opts,
@@ -276,7 +276,7 @@ mod tests {
 
         let opts = Opts{
             subcmd: Some(SubCommand::Now),
-            no_newlines: false
+            no_newlines: false,
         };
 
         handle(
