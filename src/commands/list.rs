@@ -69,7 +69,12 @@ mod tests {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         list_tasks(&mut board, &mut writer);
 
@@ -82,7 +87,12 @@ mod tests {
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         board.create_task("task1");
         board.create_task("task2");
@@ -110,7 +120,13 @@ task5\t\t\ttask3\t\t\t\n\n";
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
 
         board.create_task("task1");
         board.update("task1", get_task("task1", Column::Doing));
@@ -129,7 +145,12 @@ task5\t\t\ttask3\t\t\t\n\n";
         let mut writer = Cursor::new(vec!());
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
         board.create_task("task1-very-long");
         board.create_task("task2-very-long");
         board.create_task("task3");

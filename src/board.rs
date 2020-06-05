@@ -14,7 +14,8 @@ pub trait BoardAccess {
 
 pub struct Board<'a, S: Store<Task>, C: Store<Vec<String>>> {
     store: &'a mut S,
-    column_store: &'a mut C
+    column_store: &'a mut C,
+    tag_store: &'a mut C,
 }
 
 impl <
@@ -22,11 +23,13 @@ impl <
 > Board<'a, S, C> {
     pub fn new(
         store: &'a mut S,
-        column_store: &'a mut C
+        column_store: &'a mut C,
+        tag_store: &'a mut C
     ) -> Board<'a, S, C> {
         Board{
             store,
-            column_store
+            column_store,
+            tag_store
         }
     }
 
@@ -66,6 +69,30 @@ impl <
             tags: None
         }
     }
+
+    fn get_tag_diff(
+        &self,
+        old_tags: Option<Vec<String>>,
+        new_tags: Option<Vec<String>>
+    ) -> (Vec<String>, Vec<String>) {
+        let mut add_tags = vec!();
+        let mut rm_tags = vec!();
+        if old_tags.is_none() {
+            add_tags = new_tags.unwrap_or(vec!());
+        }
+
+        (add_tags, rm_tags)
+    }
+
+    fn index_tags(&mut self, tags: Vec<String>, key: &str) {
+        for tag in tags {
+            let mut tag_list = self.tag_store.get(&tag)
+                .unwrap_or(vec!());
+            tag_list.push(key.to_owned());
+            tag_list.dedup();
+            self.tag_store.set(&tag, tag_list);
+        }
+    }
 }
 
 impl <
@@ -93,6 +120,23 @@ impl <
     }
 
     fn update(&mut self, key: &str, task: Task) {
+        let old_tags = {
+            let result = self.get(key);
+            if result.is_none() {
+                None    
+            } else {
+                result.unwrap().tags
+            }
+        };
+
+        let (add_tags, rm_tags) = self.get_tag_diff(
+            old_tags,
+            task.tags.clone()
+        );
+
+        self.index_tags(add_tags, key);
+//        self.rm_tag_index(rm_tags, key);
+
         self.remove(key);
         self.store.set(key, task.clone());
         self.add_to_column(key, task.column);
@@ -166,7 +210,12 @@ mod tests {
             ("task2", get_task("task2", Column::Todo)),
         ));
         let mut col_store = StoreMock::new();
-        let board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         let tasks = board.get_all_tasks();
 
@@ -177,7 +226,12 @@ mod tests {
     fn it_can_create_a_task_with_a_key() {
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         board.create_task("test");
         let task = get_task("test", Column::Todo);
@@ -189,7 +243,13 @@ mod tests {
     fn it_adds_new_tasks_to_todo() {
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
 
         board.create_task("test");
 
@@ -203,8 +263,12 @@ mod tests {
     fn new_tasks_added_to_bottom_of_todo_column() {
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
-
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
         board.create_task("test1");
         board.create_task("test2");
 
@@ -222,7 +286,12 @@ mod tests {
         let mut store = StoreMock::new();
         store.set("test", task.clone());
         let mut col_store = StoreMock::new();
-        let board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         let returned_task = board.get("test");
 
@@ -233,7 +302,12 @@ mod tests {
     fn it_can_rm_a_task_with_a_key() {
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
         board.create_task("test");
         board.remove("test");
 
@@ -244,7 +318,12 @@ mod tests {
     fn removing_a_task_removes_it_from_the_column() {
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         board.create_task("test");
         board.remove("test");
@@ -258,8 +337,12 @@ mod tests {
 
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
-
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
         board.update("test", task.clone());
 
         assert!(store.set_called_with("test", &task));
@@ -271,7 +354,12 @@ mod tests {
 
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         board.create_task("test");
         board.update("test", task.clone());
@@ -298,7 +386,13 @@ mod tests {
             ),
         ));
 
-        let board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
         let tasks = board.get_column("doing");
         assert_eq!(tasks.len(), 2);
     }
@@ -310,7 +404,12 @@ mod tests {
         let mut store = StoreMock::new();
         store.set("test", task.clone());
         let mut col_store = StoreMock::new();
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
 
         board.reindex_columns();
 
@@ -337,7 +436,13 @@ mod tests {
             ),
         ));
 
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
         board.top_priority("task1");
         let col = board.get_column("doing");
         let task1 = col.get(0).unwrap();
@@ -363,7 +468,13 @@ mod tests {
             ),
         ));
 
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
         board.top_priority("task1");
         board.update("task1", get_task("task1", Column::Done));
         assert_eq!(board.get_column("done").len(), 1);
@@ -387,8 +498,12 @@ mod tests {
                 )
             ),
         ));
-
-        let mut board = Board::new(&mut store, &mut col_store);
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
         board.top_priority("task1");
         board.top_priority("task2");
         assert_eq!(
@@ -397,6 +512,76 @@ mod tests {
         );
     }
 
+    #[test]
+    fn it_indexes_tags_when_they_are_created() {
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+        board.create_task("task");
+        let mut new_task = get_task("task", Column::Todo);
+        new_task.tags = Some(vec!("tag".to_owned()));
+        board.update("task", new_task);
+
+        let tag_index = tag_store.get("tag").unwrap();
+
+        assert_eq!(
+            tag_index,
+            vec!("task".to_string())
+        );
+    }
+
+    #[test]
+    fn it_adds_to_existing_indexes_when_there_is_a_tag() {
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        tag_store.set("tag", vec!("task2".to_owned()));
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+        board.create_task("task");
+        let mut new_task = get_task("task", Column::Todo);
+        new_task.tags = Some(vec!("tag".to_owned()));
+        board.update("task", new_task);
+
+        let tag_index = tag_store.get("tag").unwrap();
+
+        assert_eq!(
+            tag_index,
+            vec!("task2".to_owned(), "task".to_owned())
+        );
+    }
+
+    #[test]
+    fn it_doesnt_dupe_tag_indices() {
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        tag_store.set("tag", vec!("task".to_owned()));
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+        board.create_task("task");
+        let mut new_task = get_task("task", Column::Todo);
+        new_task.tags = Some(vec!("tag".to_owned()));
+        board.update("task", new_task);
+
+        let tag_index = tag_store.get("tag").unwrap();
+
+        assert_eq!(
+            tag_index,
+            vec!("task".to_owned())
+        );
+    }
 
     fn get_task(key: &str, column: Column) -> Task {
         Task {

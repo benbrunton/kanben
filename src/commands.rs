@@ -24,11 +24,12 @@ use standard_actions::{
     complete_item,
     top
 };
+use tag::tag;
 
-pub fn handle<B: BoardAccess>(
+pub fn handle<B: BoardAccess, W: Write>(
     opts: Opts,
     board: &mut B,
-    writer: &mut dyn Write,
+    writer: &mut W,
     editor: &mut dyn Editor,
     file_reader: &dyn Reader,
 ) {
@@ -54,7 +55,9 @@ pub fn handle<B: BoardAccess>(
             board, writer
         ),
         Some(SubCommand::Top(a)) => top(a.title, board),
-        Some(SubCommand::Tag(_a)) => ()
+        Some(SubCommand::Tag(a)) => tag(
+            &a.title, a.tag, board, writer
+        )
     }
 }
 

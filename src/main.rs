@@ -35,13 +35,21 @@ fn main() {
         Some("tasks")
     ).expect("unable to get bucket");
     let col_bucket = kv_store.bucket::<String, Json<Vec<String>>>(
-        Some("tasks")
+        Some("columns")
+    ).expect("unable to get bucket");
+    let tag_bucket = kv_store.bucket::<String, Json<Vec<String>>>(
+        Some("tags")
     ).expect("unable to get bucket");
 
 
     let mut store = PersistantStore::new(&bucket);
     let mut col_store = PersistantStore::new(&col_bucket);
-    let mut board = Board::new(&mut store, &mut col_store);
+    let mut tag_store = PersistantStore::new(&tag_bucket);
+    let mut board = Board::new(
+        &mut store,
+        &mut col_store,
+        &mut tag_store
+    );
 
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
