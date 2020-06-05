@@ -156,7 +156,8 @@ task5\t\t\ttask3\t\t\t\n\n";
         Task{
             name: name.to_owned(),
             column,
-            description: None
+            description: None,
+            tags: None
         }
     }
 }

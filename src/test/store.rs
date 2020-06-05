@@ -75,12 +75,7 @@ mod tests {
     fn it_records_what_is_set() {
         let mut store = StoreMock::new();
         let name = String::from("test");
-        let task = Task {
-            name: name.clone(),
-            column: Column::Doing,
-            description: None
-        };
-
+        let task = get_task(&name, Column::Doing);
         store.set(&name, task.clone());
 
         assert!(store.set_called_with(&name, &task));
@@ -89,19 +84,9 @@ mod tests {
     #[test]
     fn it_returns_false_if_set_not_called_with_passed_values() {
         let mut store = StoreMock::new();
-        let name = String::from("test");
-        let passed_task = Task {
-            name: String::from("fake test"),
-            column: Column::Doing,
-            description: None
-        };
-
-        let checked_task = Task {
-            name: name.clone(),
-            column: Column::Doing,
-            description: None
-        };
-
+        let name = "test".to_owned();
+        let passed_task = get_task("fake test", Column::Doing);
+        let checked_task = get_task(&name, Column::Doing);
 
         store.set(&name, passed_task.clone());
         assert!(!store.set_called_with(&name, &checked_task));
@@ -119,12 +104,7 @@ mod tests {
     fn it_returns_true_when_set_was_called() {
         let mut store = StoreMock::new();
         let name = String::from("test");
-        let task = Task {
-            name: String::from("fake test"),
-            column: Column::Doing,
-            description: None
-        };
-
+        let task = get_task("fake test", Column::Doing);
         store.set(&name, task.clone());
 
         assert!(store.set_called());
@@ -134,12 +114,7 @@ mod tests {
     fn it_can_bulk_add_tasks() {
         let mut store = StoreMock::new();
         let name = String::from("test");
-        let task = Task {
-            name: String::from("fake test"),
-            column: Column::Doing,
-            description: None
-        };
-
+        let task = get_task("fake test", Column::Doing);
         store.bulk_insert(vec!((&name, task.clone())));
 
         assert_eq!(
@@ -167,12 +142,7 @@ mod tests {
     #[test]
     fn it_can_set_the_response_of_get() {
         let mut store = StoreMock::new();
-        let task = Task {
-            name: String::from("test"),
-            column: Column::Doing,
-            description: None
-        };
-
+        let task = get_task("test", Column::Doing);
         store.set("test", task.clone());
 
         let returned_task: Task = store.get("test").unwrap();
@@ -187,12 +157,7 @@ mod tests {
     fn it_can_bulk_add_for_get_by_key() {
         let mut store = StoreMock::new();
         let key = String::from("test");
-        let task = Task {
-            name: String::from("fake test"),
-            column: Column::Doing,
-            description: None
-        };
-
+        let task = get_task("fake test", Column::Doing);
         store.bulk_insert(vec!((&key, task.clone())));
 
         assert_eq!(
@@ -201,4 +166,12 @@ mod tests {
         );
     }
 
+    fn get_task(key: &str, column: Column) -> Task {
+        Task {
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
+    }
 }

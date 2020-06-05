@@ -82,7 +82,7 @@ impl BoardAccess for BoardMock {
         unimplemented!()
     }
 
-    fn top_priority(&mut self, key: &str) {
+    fn top_priority(&mut self, _key: &str) {
         unimplemented!()
     }
 }
@@ -95,16 +95,8 @@ mod tests {
     fn it_can_set_all_tasks_to_be_returned() {
         let mut board_mock = BoardMock::new();
         let tasks = vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None,
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None,
-            }
+            get_task("task1", Column::Doing),
+            get_task("task2", Column::Todo),
         );
 
         board_mock.set_tasks(tasks.clone());
@@ -115,12 +107,7 @@ mod tests {
     #[test]
     fn it_can_set_for_get() {
         let mut board_mock = BoardMock::new();
-        let task = Task{
-            name: "task1".to_string(),
-            column: Column::Doing,
-            description: None
-        };
-
+        let task = get_task("task1", Column::Doing);
         board_mock.set("task1", task.clone());
 
         assert_eq!(board_mock.get("task1").unwrap(), task.clone());
@@ -155,11 +142,7 @@ mod tests {
     fn it_can_report_on_updated_tasks() {
         let mut board_mock = BoardMock::new();
 
-        let task = Task{
-            name: "task1".to_string(),
-            column: Column::Doing,
-            description: None
-        };
+        let task = get_task("task1", Column::Doing);
         board_mock.update("task1", task.clone());
 
         assert!(
@@ -170,11 +153,7 @@ mod tests {
     #[test]
     fn it_returns_false_when_update_check_doesnt_match() {
         let board_mock = BoardMock::new();
-        let task = Task{
-            name: "task1".to_string(),
-            column: Column::Doing,
-            description: None
-        };
+        let task = get_task("task1", Column::Doing);
 
         assert!(
             !board_mock.update_called_with("task1", &task)
@@ -208,5 +187,14 @@ mod tests {
         assert!(board_mock.remove_called_with("task2"));
         assert!(board_mock.remove_called_with("task3"));
 
+    }
+
+    fn get_task(key: &str, column: Column) -> Task {
+        Task{
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
     }
 }

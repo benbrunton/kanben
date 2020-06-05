@@ -55,31 +55,11 @@ mod tests {
         let mut board = BoardMock::new();
 
         board.set_tasks(vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Done,
-                description: None
-            },
+            get_task("task1", Column::Doing),
+            get_task("task2", Column::Todo),
+            get_task("task3", Column::Done),
+            get_task("task4", Column::Done),
+            get_task("task5", Column::Done),
         ));
 
 
@@ -95,31 +75,11 @@ mod tests {
         let mut board = BoardMock::new();
 
         board.set_tasks(vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Done,
-                description: None
-            },
+            get_task("task1", Column::Doing),
+            get_task("task2", Column::Todo),
+            get_task("task3", Column::Done),
+            get_task("task4", Column::Done),
+            get_task("task5", Column::Done),
         ));
 
 
@@ -135,31 +95,11 @@ mod tests {
         let mut board = BoardMock::new();
 
         board.set_tasks(vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Done,
-                description: None
-            },
+            get_task("task1", Column::Doing),
+            get_task("task2", Column::Doing),
+            get_task("task3", Column::Done),
+            get_task("task4", Column::Done),
+            get_task("task5", Column::Done),
         ));
 
 
@@ -175,31 +115,11 @@ mod tests {
         let mut board = BoardMock::new();
 
         board.set_tasks(vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Done,
-                description: None
-            },
+            get_task("task1", Column::Doing),
+            get_task("task2", Column::Doing),
+            get_task("task3", Column::Done),
+            get_task("task4", Column::Done),
+            get_task("task5", Column::Done)
         ));
 
 
@@ -208,6 +128,15 @@ mod tests {
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();
         assert_eq!(str_output, "task1,task2".to_string());
+    }
+
+    fn get_task(key: &str, column: Column) -> Task {
+        Task {
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
     }
 
 }

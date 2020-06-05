@@ -31,7 +31,9 @@ pub enum SubCommand {
     #[clap(about="Re-indexes columns")]
     Reindex,
     #[clap(about="moves task to top of priorities")]
-    Top(Item)
+    Top(Item),
+    #[clap(about="add a tag to a task or view a tasks tags")]
+    Tag(TagItem)
 }
 
 #[derive(Clap, Clone, PartialEq)]
@@ -39,11 +41,19 @@ pub struct Item {
     pub title: String
 }
 
+#[derive(Clap, Clone, PartialEq)]
+pub struct TagItem {
+    pub title: String,
+    pub tag: Option<String>
+}
+
+
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct Task {
     pub name: String,
     pub column: Column,
-    pub description: Option<String> 
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]

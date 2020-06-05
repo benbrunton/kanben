@@ -56,11 +56,8 @@ mod tests {
         let mut reader = ReaderMock::new();
         let name = "test".to_string();
 
-        let task = Task{
-            name: name.clone(),
-            column: Column::Todo,
-            description: Some("test".to_string())
-        };
+        let mut task = get_task(&name, Column::Todo);
+        task.description = Some("test".to_owned());
 
         board.set(&name, task);
         reader.return_from_read("abcdef");
@@ -83,11 +80,8 @@ mod tests {
         let mut reader = ReaderMock::new();
         let name = "test";
 
-        let task = Task{
-            name: name.to_string(),
-            column: Column::Todo,
-            description: Some(name.to_string())
-        };
+        let mut task = get_task(name, Column::Todo);
+        task.description = Some(name.to_string());
 
         board.set(name, task);
         reader.return_from_read_when(name, "file contents");
@@ -128,11 +122,7 @@ mod tests {
         let reader = ReaderMock::new();
         let name = "test";
 
-        let task = Task{
-            name: name.to_string(),
-            column: Column::Todo,
-            description: None
-        };
+        let task = get_task(name, Column::Todo);
 
         board.set(name, task);
 
@@ -155,11 +145,8 @@ mod tests {
         let mut reader = ReaderMock::new();
         let name = "test";
 
-        let task = Task{
-            name: name.to_string(),
-            column: Column::Todo,
-            description: Some(name.to_string())
-        };
+        let mut task = get_task(name, Column::Todo);
+        task.description = Some(name.to_string());
 
         board.set(name, task);
         reader.return_from_read_when("fakeroute", "file contents");
@@ -174,5 +161,14 @@ mod tests {
         let output = writer.get_ref();
         assert_eq!(output, b"Error loading file for 'test'\n");
 
+    }
+
+    fn get_task(key: &str, column: Column) -> Task {
+        Task {
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
     }
 }

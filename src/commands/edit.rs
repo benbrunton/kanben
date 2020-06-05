@@ -41,17 +41,14 @@ mod tests {
 
     #[test]
     fn it_opens_an_associated_file_when_there_is_one() {
-        let key = String::from("test");
-        let path_to_file = String::from("path to test file");
+        let key = "test".to_owned();
+        let path_to_file = "path to test file".to_owned();
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut writer = Cursor::new(vec!());
 
-        let task = Task{
-            name: key.clone(),
-            column: Column::Todo,
-            description: Some(path_to_file.clone())
-        };
+        let mut task = get_task(&key, Column::Todo);
+        task.description = Some(path_to_file.clone());
 
         board.set(&key, task);
         
@@ -66,11 +63,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut writer = Cursor::new(vec!());
-        let task = Task{
-            name: key.clone(),
-            column: Column::Todo,
-            description: None
-        };
+        let task = get_task(&key, Column::Todo);
 
         board.set(&key, task);
         edit_item(key.clone(), &mut board, &mut editor, &mut writer);
@@ -95,23 +88,15 @@ mod tests {
 
     #[test]
     fn it_stores_the_path_to_a_task_when_a_file_is_created() {
-        let key = "test".to_string();
-        let filepath = "test path".to_string();
+        let key = "test".to_owned();
+        let filepath = "test path".to_owned();
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut writer = Cursor::new(vec!());
-        let task = Task{
-            name: key.clone(),
-            column: Column::Todo,
-            description: None
-        };
+        let task = get_task(&key, Column::Todo);
 
-        let new_task = Task{
-            name: key.clone(),
-            column: Column::Todo,
-            description: Some(filepath.clone())
-        };
-
+        let mut new_task = get_task(&key, Column::Todo);
+        new_task.description = Some(filepath.clone());
 
         board.set(&key, task);
         editor.return_from_create(Ok(filepath.clone()));
@@ -128,15 +113,12 @@ mod tests {
 
     #[test]
     fn when_a_path_is_empty_string_it_creates_a_new_file() {
-        let key = String::from("test");
+        let key = "test".to_owned();
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut writer = Cursor::new(vec!());
-        let task = Task{
-            name: key.clone(),
-            column: Column::Todo,
-            description: Some("".to_string())
-        };
+        let mut task = get_task(&key, Column::Todo);
+        task.description = Some("".to_owned());
 
         board.set(&key, task);
         edit_item(
@@ -147,5 +129,14 @@ mod tests {
         );
 
         assert!(editor.create_called_with(&key));
+    }
+
+    fn get_task(key: &str, column: Column) -> Task {
+        Task {
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
     }
 }

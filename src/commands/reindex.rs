@@ -8,6 +8,7 @@ pub fn reindex<B: BoardAccess>(
     let _ = board.reindex_columns();
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -25,3 +26,4 @@ mod tests {
         let output = writer.get_ref();
     }
 }
+*/

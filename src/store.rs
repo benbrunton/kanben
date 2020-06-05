@@ -41,8 +41,14 @@ impl <'a,
     }
 
     fn get(&self, key: &str) -> Option<T> {
-        let item_result = self.bucket.get(String::from(key))
-            .expect("unable to connect to kv store");
+        let get_result = self.bucket.get(key.to_owned());
+
+        let item_result = match get_result {
+            Err(_) => {
+                return None;
+            },
+            Ok(t) => t,
+        }; 
         match item_result {
             None => None,
             Some(x) => {

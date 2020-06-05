@@ -50,11 +50,20 @@ impl <
         label
     }
 
+    fn find_in_column(
+        &self,
+        key: &str,
+        column: &Vec<String>
+    ) -> Option<usize> {
+        column.iter().position(|x| x == key)
+    }
+
     fn get_new_task(&self, key: &str) -> Task {
         Task{
             name: key.to_owned(),
             column: Column::Todo,
-            description: None
+            description: None,
+            tags: None
         }
     }
 }
@@ -68,8 +77,9 @@ impl <
 
     fn get_column(&self, column: &str) -> Vec<Task> {
         let list = self.get_column_list(column);
-        list.iter().map(|key| self.store.get(&key).unwrap())
-            .collect()
+        list.iter().filter_map(|key| {
+            self.store.get(&key)
+        }).collect()
     }
 
     fn create_task(&mut self, key: &str){
@@ -93,8 +103,13 @@ impl <
             Some(task) => {
                 let col_label = self.get_column_label(task.column);
                 let mut col = self.get_column_list(&col_label);
-                let index = col.binary_search(&key.to_owned())
-                    .expect("can't find in column");
+                let index = self.find_in_column(key, &col)
+                    .expect(
+                        &format!(
+                            "can't find '{}' in column '{}'",
+                            key, col_label
+                        )
+                    );
                 col.remove(index);
                 self.column_store.set(&col_label, col);
                 self.store.rm(key)
@@ -120,8 +135,13 @@ impl <
             Some(task) => {
                 let label = self.get_column_label(task.column);
                 let mut col = self.get_column_list(&label);
-                let index = col.binary_search(&key.to_owned())
-                    .expect("can't find in column");
+                let index = self.find_in_column(key, &col)
+                    .expect(
+                        &format!(
+                            "can't find '{}' in column '{}'",
+                            key, label
+                        )
+                    );
                 col.remove(index);
                 col.insert(0, task.name.clone());
                 self.column_store.set(&label, col);
@@ -142,16 +162,8 @@ mod tests {
         let mut store = StoreMock::new();
 
         store.bulk_insert(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task2", Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None,
-            }),
+            ("task1", get_task("task1", Column::Doing)),
+            ("task2", get_task("task2", Column::Todo)),
         ));
         let mut col_store = StoreMock::new();
         let board = Board::new(&mut store, &mut col_store);
@@ -168,11 +180,7 @@ mod tests {
         let mut board = Board::new(&mut store, &mut col_store);
 
         board.create_task("test");
-        let task = Task {
-            name: "test".to_string(),
-            column: Column::Todo,
-            description: None
-        };
+        let task = get_task("test", Column::Todo);
 
         assert!(store.set_called_with("test", &task));
     }
@@ -209,11 +217,7 @@ mod tests {
 
     #[test]
     fn it_can_get_a_task_with_a_key() {
-        let task = Task {
-            name: "test".to_string(),
-            column: Column::Todo,
-            description: None
-        };
+        let task = get_task("test", Column::Todo);
 
         let mut store = StoreMock::new();
         store.set("test", task.clone());
@@ -250,11 +254,7 @@ mod tests {
 
     #[test]
     fn it_can_update() {
-        let task = Task {
-            name: "test".to_string(),
-            column: Column::Todo,
-            description: None
-        };
+        let task = get_task("test", Column::Todo);
 
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
@@ -267,11 +267,7 @@ mod tests {
 
     #[test]
     fn update_moves_items_between_columns() {
-        let task = Task {
-            name: "test".to_string(),
-            column: Column::Doing,
-            description: None
-        };
+        let task = get_task("test", Column::Doing);
 
         let mut store = StoreMock::new();
         let mut col_store = StoreMock::new();
@@ -288,21 +284,9 @@ mod tests {
         let mut store = StoreMock::new();
 
         store.bulk_insert(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task2", Task{
-                name: String::from("task2"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task4", Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None,
-            })
+            ("task1", get_task("task1", Column::Doing)),
+            ("task2", get_task("task2", Column::Doing)),
+            ("task4", get_task("task4", Column::Todo)),
         ));
 
         let mut col_store = StoreMock::new();
@@ -321,11 +305,7 @@ mod tests {
 
     #[test]
     fn it_can_reindex_columns() {
-        let task = Task {
-            name: "test".to_string(),
-            column: Column::Doing,
-            description: None
-        };
+        let task = get_task("test", Column::Doing);
 
         let mut store = StoreMock::new();
         store.set("test", task.clone());
@@ -343,21 +323,9 @@ mod tests {
         let mut store = StoreMock::new();
 
         store.bulk_insert(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task2", Task{
-                name: String::from("task2"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task4", Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None,
-            })
+            ("task1", get_task("task1", Column::Doing)),
+            ("task2", get_task("task2", Column::Doing)),
+            ("task4", get_task("task2", Column::Todo)),
         ));
 
         let mut col_store = StoreMock::new();
@@ -378,25 +346,12 @@ mod tests {
 
     #[test]
     fn it_can_move_an_item_after_making_it_priority() {
-        // there was a bug with this previously
         let mut store = StoreMock::new();
 
         store.bulk_insert(vec!(
-            ("task1", Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task2", Task{
-                name: String::from("task2"),
-                column: Column::Doing,
-                description: None,
-            }),
-            ("task4", Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None,
-            })
+            ("task1", get_task("task1", Column::Doing)),
+            ("task2", get_task("task2", Column::Doing)),
+            ("task4", get_task("task4", Column::Todo))
         ));
 
         let mut col_store = StoreMock::new();
@@ -410,11 +365,45 @@ mod tests {
 
         let mut board = Board::new(&mut store, &mut col_store);
         board.top_priority("task1");
-        board.update("task1", Task{
-            name: "task1".to_owned(),
-            column: Column::Done,
-            description: None
-        });
+        board.update("task1", get_task("task1", Column::Done));
         assert_eq!(board.get_column("done").len(), 1);
+    }
+
+    #[test]
+    fn it_can_repeat_a_priority_action() {
+        let mut store = StoreMock::new();
+
+        store.bulk_insert(vec!(
+            ("task1", get_task("task1", Column::Doing)),
+            ("task2", get_task("task2", Column::Doing)),
+            ("task4", get_task("task4", Column::Todo))
+        ));
+
+        let mut col_store = StoreMock::new();
+        col_store.bulk_insert(vec!(
+            ("doing", vec!(
+                    "task2".to_owned(),
+                    "task1".to_owned()
+                )
+            ),
+        ));
+
+        let mut board = Board::new(&mut store, &mut col_store);
+        board.top_priority("task1");
+        board.top_priority("task2");
+        assert_eq!(
+            board.get_column("doing").get(0).unwrap(),
+            &get_task("task2", Column::Doing)
+        );
+    }
+
+
+    fn get_task(key: &str, column: Column) -> Task {
+        Task {
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
     }
 }

@@ -10,6 +10,7 @@ mod view;
 mod standard_actions;
 mod now;
 mod reindex;
+mod tag;
 use list::list_tasks;
 use edit::edit_item;
 use view::view_item;
@@ -52,8 +53,8 @@ pub fn handle<B: BoardAccess>(
         Some(SubCommand::Reindex) => reindex(
             board, writer
         ),
-        Some(SubCommand::Top(a)) => top(a.title, board)
-        
+        Some(SubCommand::Top(a)) => top(a.title, board),
+        Some(SubCommand::Tag(_a)) => ()
     }
 }
 
@@ -173,31 +174,11 @@ mod tests {
         let reader = ReaderMock::new();
 
         board.set_tasks(vec!(
-            Task{
-                name: String::from("task1"),
-                column: Column::Doing,
-                description: None
-            },
-            Task{
-                name: String::from("task2"),
-                column: Column::Todo,
-                description: None
-            },
-            Task{
-                name: String::from("task3"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task4"),
-                column: Column::Done,
-                description: None
-            },
-            Task{
-                name: String::from("task5"),
-                column: Column::Done,
-                description: None
-            },
+            get_task("task1", Column::Doing),
+            get_task("task2", Column::Todo),
+            get_task("task3", Column::Done),
+            get_task("task4", Column::Done),
+            get_task("task5", Column::Done),
         ));
 
         let opts = Opts {
@@ -230,11 +211,8 @@ mod tests {
             title: name.clone()
         };
 
-        let task = Task{
-            name: name.clone(),
-            column: Column::Todo,
-            description: Some("test".to_string())
-        };
+        let mut task = get_task(&name, Column::Todo);
+        task.description = Some("test".to_owned());
 
         board.set(&name, task);
 
@@ -264,11 +242,8 @@ mod tests {
             title: name.clone()
         };
 
-        let task = Task{
-            name: name.clone(),
-            column: Column::Todo,
-            description: Some("test".to_string())
-        };
+        let mut task = get_task(&name, Column::Todo);
+        task.description = Some("test".to_owned());
 
         board.set(&name, task);
         reader.return_from_read("abcdef");
@@ -313,4 +288,12 @@ mod tests {
         assert_eq!(output, b"");
     }
 
+    fn get_task(key: &str, column: Column) -> Task {
+        Task {
+            name: key.to_owned(),
+            column,
+            description: None,
+            tags: None
+        }
+    }
 }
