@@ -21,6 +21,16 @@ pub fn view_item<B: BoardAccess>(
 
     let task = task_result.unwrap();
 
+    if task.tags.is_some() {
+        let tags = task.tags.unwrap();
+
+        write!(
+            writer,
+            "tags: {}\n",
+            tags.join(", ")
+        ).unwrap();
+    }
+
     if task.description.is_none() {
         write!(
             writer,
@@ -39,6 +49,7 @@ pub fn view_item<B: BoardAccess>(
         ).unwrap();
         return;
     }
+
     write!(writer, "{}\n", read_result.unwrap()).unwrap();
 }
 
@@ -160,6 +171,31 @@ mod tests {
 
         let output = writer.get_ref();
         assert_eq!(output, b"Error loading file for 'test'\n");
+    }
+
+    #[test]
+    fn it_outputs_tags_at_the_top_of_a_message() {
+        let mut writer = Cursor::new(vec!());
+        let mut board = BoardMock::new();
+        let mut reader = ReaderMock::new();
+        let name = "test";
+
+        let mut task = get_task(name, Column::Todo);
+        task.description = Some(name.to_owned());
+        task.tags = Some(vec!("tag1".to_owned()));
+
+        board.set(name, task);
+        reader.return_from_read_when(name, "file contents");
+
+        view_item(
+            name.to_string(),
+            &mut board,
+            &mut writer,
+            &reader
+        );
+
+        let output = writer.get_ref();
+        assert_eq!(output, b"tags: tag1\nfile contents\n");
 
     }
 
