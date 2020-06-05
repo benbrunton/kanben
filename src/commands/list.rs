@@ -3,13 +3,19 @@ use math::round;
 use crate::board::BoardAccess;
 use crate::opts::Task;
 
-pub fn list_tasks<B: BoardAccess>(
-    board: &B, writer: &mut dyn Write
+pub fn list_tasks<B: BoardAccess, W: Write>(
+    tag: Option<String>, board: &B, writer: &mut W
 ) {
     writer.write(b"TODO:\t\t\tDOING:\t\t\tDONE:\n").unwrap();
-    let todo = get_task_labels(board.get_column("todo"));
-    let doing = get_task_labels(board.get_column("doing"));
-    let done = get_task_labels(board.get_column("done"));
+    let todo = get_task_labels(
+        board.get_column("todo", tag.clone())
+    );
+    let doing = get_task_labels(
+        board.get_column("doing", tag.clone())
+    );
+    let done = get_task_labels(
+        board.get_column("done", tag.clone())
+    );
 
     let col_max = find_col_max(vec![
         todo.len(),
@@ -76,7 +82,7 @@ mod tests {
             &mut tag_store
         );
 
-        list_tasks(&mut board, &mut writer);
+        list_tasks(None, &mut board, &mut writer);
 
         let output = writer.get_ref();
         assert_eq!(output, b"TODO:\t\t\tDOING:\t\t\tDONE:\n\n");
@@ -105,7 +111,7 @@ mod tests {
         board.update("task3", get_task("task3", Column::Doing));
 
 
-        list_tasks(&mut board, &mut writer);
+        list_tasks(None, &mut board, &mut writer);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();
@@ -131,7 +137,7 @@ task5\t\t\ttask3\t\t\t\n\n";
         board.create_task("task1", None);
         board.update("task1", get_task("task1", Column::Doing));
 
-        list_tasks(&mut board, &mut writer);
+        list_tasks(None, &mut board, &mut writer);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();
@@ -163,7 +169,7 @@ task5\t\t\ttask3\t\t\t\n\n";
         board.update("task3", get_task("task3", Column::Doing));
         board.update("task4", get_task("task4", Column::Done));
 
-        list_tasks(&mut board, &mut writer);
+        list_tasks(None, &mut board, &mut writer);
 
         let output = writer.get_ref();
         let str_output = str::from_utf8(&output).unwrap();

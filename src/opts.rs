@@ -8,6 +8,8 @@ pub struct Opts {
     pub subcmd: Option<SubCommand>,
     #[clap(short, long, about="supress newlines in output")]
     pub no_newlines: bool,
+    #[clap(short, long, about="filter by tags")]
+    pub tag: Option<String>
 }
 
 #[derive(Clap)]

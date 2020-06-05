@@ -3,7 +3,7 @@ use crate::opts::{Task, Column};
 
 pub trait BoardAccess {
     fn get_all_tasks(&self) -> Vec<Task>;
-    fn get_column(&self, column: &str) -> Vec<Task>;
+    fn get_column(&self, col: &str, tag: Option<String>) -> Vec<Task>;
     fn create_task(&mut self, key: &str, tag: Option<String>);
     fn update(&mut self, key: &str, task: Task);
     fn get(&self, key: &str) -> Option<Task>;
@@ -139,9 +139,23 @@ impl <
         self.store.get_all()
     }
 
-    fn get_column(&self, column: &str) -> Vec<Task> {
+    fn get_column(
+        &self,
+        column: &str,
+        tag: Option<String>
+    ) -> Vec<Task> {
         let list = self.get_column_list(column);
-        list.iter().filter_map(|key| {
+        let tag_result = match &tag {
+            Some(t) => self.tag_store.get(&t),
+            None => None
+        };
+
+        list.iter().filter(|&key|{
+            match &tag_result {
+                Some(v) => v.iter().any(|x| x == key),
+                None => tag.is_none()
+            }
+        }).filter_map(|key| {
             self.store.get(&key)
         }).collect()
     }
@@ -435,7 +449,7 @@ mod tests {
             &mut tag_store
         );
 
-        let tasks = board.get_column("doing");
+        let tasks = board.get_column("doing", None);
         assert_eq!(tasks.len(), 2);
     }
 
@@ -486,7 +500,7 @@ mod tests {
         );
 
         board.top_priority("task1");
-        let col = board.get_column("doing");
+        let col = board.get_column("doing", None);
         let task1 = col.get(0).unwrap();
         assert_eq!(&task1.name, "task1");
     }
@@ -519,7 +533,7 @@ mod tests {
 
         board.top_priority("task1");
         board.update("task1", get_task("task1", Column::Done));
-        assert_eq!(board.get_column("done").len(), 1);
+        assert_eq!(board.get_column("done", None).len(), 1);
     }
 
     #[test]
@@ -549,7 +563,7 @@ mod tests {
         board.top_priority("task1");
         board.top_priority("task2");
         assert_eq!(
-            board.get_column("doing").get(0).unwrap(),
+            board.get_column("doing", None).get(0).unwrap(),
             &get_task("task2", Column::Doing)
         );
     }
@@ -693,6 +707,47 @@ mod tests {
         );
     }
 
+    #[test]
+    fn it_can_return_tasks_by_column_filtered_by_tag() {
+        let mut task1 = get_task("task1", Column::Doing);
+        task1.tags = Some(vec!("tag".to_owned()));
+        let mut task2 = get_task("task2", Column::Doing);
+        task2.tags = Some(vec!("tag".to_owned()));
+        let mut store = StoreMock::new();
+
+        store.bulk_insert(vec!(
+            ("task1", task1.clone()),
+            ("task2", task2.clone()),
+            ("task3", get_task("task3", Column::Doing)),
+        ));
+
+        let mut col_store = StoreMock::new();
+        col_store.bulk_insert(vec!(
+            ("doing", vec!(
+                    "task1".to_owned(),
+                    "task2".to_owned(),
+                    "task3".to_owned(),
+                )
+            ),
+        ));
+
+        let mut tag_store = StoreMock::new();
+        tag_store.set(
+            "tag", vec!("task1".to_owned(), "task2".to_owned())
+        );
+
+        let board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
+        let tasks = board.get_column(
+            "doing",
+            Some("tag".to_owned())
+        );
+        assert_eq!(tasks, vec!(task1.clone(), task2.clone()));
+    }
 
     fn get_task(key: &str, column: Column) -> Task {
         Task {
