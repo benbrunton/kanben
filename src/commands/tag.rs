@@ -183,7 +183,7 @@ mod tests {
             &mut tag_store
         );
 
-        board.create_task("task");
+        board.create_task("task", None);
         let tag_label = Some("tag".to_string());
 
         tag("task", tag_label, false, &mut board, &mut writer);
@@ -207,7 +207,7 @@ mod tests {
             &mut col_store,
             &mut tag_store
         );
-        board.create_task("task");
+        board.create_task("task", None);
         let tag_label = Some("tag".to_string());
 
         tag("task", tag_label, false, &mut board, &mut writer);
@@ -231,7 +231,7 @@ mod tests {
             &mut col_store,
             &mut tag_store
         );
-        board.create_task("task");
+        board.create_task("task", None);
         let tag_label = Some("tag".to_string());
 
         tag(

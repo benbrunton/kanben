@@ -94,11 +94,11 @@ mod tests {
             &mut tag_store
         );
 
-        board.create_task("task1");
-        board.create_task("task2");
-        board.create_task("task3");
-        board.create_task("task4");
-        board.create_task("task5");
+        board.create_task("task1", None);
+        board.create_task("task2", None);
+        board.create_task("task3", None);
+        board.create_task("task4", None);
+        board.create_task("task5", None);
 
         board.update("task4", get_task("task4", Column::Done));
         board.update("task1", get_task("task1", Column::Doing));
@@ -128,7 +128,7 @@ task5\t\t\ttask3\t\t\t\n\n";
         );
 
 
-        board.create_task("task1");
+        board.create_task("task1", None);
         board.update("task1", get_task("task1", Column::Doing));
 
         list_tasks(&mut board, &mut writer);
@@ -151,11 +151,11 @@ task5\t\t\ttask3\t\t\t\n\n";
             &mut col_store,
             &mut tag_store
         );
-        board.create_task("task1-very-long");
-        board.create_task("task2-very-long");
-        board.create_task("task3");
-        board.create_task("task4");
-        board.create_task("task5");
+        board.create_task("task1-very-long", None);
+        board.create_task("task2-very-long", None);
+        board.create_task("task3", None);
+        board.create_task("task4", None);
+        board.create_task("task5", None);
 
         board.update("task1-very-long",
             get_task("task1-very-long", Column::Doing)

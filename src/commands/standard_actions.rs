@@ -3,7 +3,7 @@ use crate::board::BoardAccess;
 
 pub fn add_item<B: BoardAccess>(name: String, board: &mut B){
     if is_valid_key(&name) {
-        board.create_task(&name);
+        board.create_task(&name, None);
     }
 }
 

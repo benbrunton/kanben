@@ -13,7 +13,7 @@ pub struct Opts {
 #[derive(Clap)]
 pub enum SubCommand {
     #[clap(about="Adds a new task in todo column")]
-    Add(Item),
+    Add(NewItem),
     #[clap(about="Move a task into doing")]
     Start(Item),
     #[clap(about="Move a task into done")]
@@ -40,6 +40,14 @@ pub enum SubCommand {
 pub struct Item {
     #[clap(about="Name of task")]
     pub title: String
+}
+
+#[derive(Clap, Clone, PartialEq)]
+pub struct NewItem {
+    #[clap(about="Name of task")]
+    pub title: String,
+    #[clap(short, long, about="add a tag to the new task")]
+    pub tag: Option<String>
 }
 
 #[derive(Clap, Clone, PartialEq)]

@@ -59,7 +59,7 @@ impl BoardAccess for BoardMock {
         vec!()
     }
 
-    fn create_task(&mut self, key: &str){
+    fn create_task(&mut self, key: &str, _: Option<String>){
         self.create_task = Some(key.to_string());
     }
 
@@ -123,7 +123,7 @@ mod tests {
     fn it_can_report_on_created_tasks() {
         let mut board_mock = BoardMock::new();
 
-        board_mock.create_task("task1");
+        board_mock.create_task("task1", None);
 
         assert!(
             board_mock.create_task_called_with("task1")

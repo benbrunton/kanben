@@ -74,8 +74,9 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let name = String::from("test");
-        let item = Item{
-            title: name.clone()
+        let item = NewItem{
+            title: name.clone(),
+            tag: None
         };
 
         let opts = Opts {
@@ -100,8 +101,9 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let name = String::from(" ");
-        let item = Item{
-            title: name.clone()
+        let item = NewItem{
+            title: name.clone(),
+            tag: None
         };
 
         let opts = Opts {
