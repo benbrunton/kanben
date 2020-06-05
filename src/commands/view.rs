@@ -1,6 +1,7 @@
 use std::io::Write;
 use crate::board::BoardAccess;
 use crate::file::Reader;
+use colored::*;
 
 pub fn view_item<B: BoardAccess>(
     key: String,
@@ -23,11 +24,11 @@ pub fn view_item<B: BoardAccess>(
 
     if task.tags.is_some() {
         let tags = task.tags.unwrap();
-
+        let tag_str = format!("tags: {}\n", tags.join(", "));
         write!(
             writer,
-            "tags: {}\n",
-            tags.join(", ")
+            "{}",
+            tag_str.bold()
         ).unwrap();
     }
 
@@ -58,7 +59,7 @@ mod tests {
     use super::*;
     use crate::opts::{Task, Column};
     use crate::test::{BoardMock, ReaderMock};
-    use std::io::Cursor;
+    use std::{str, io::Cursor};
 
     #[test]
     fn it_outputs_to_writer_from_reader() {
@@ -193,9 +194,14 @@ mod tests {
             &mut writer,
             &reader
         );
-
         let output = writer.get_ref();
-        assert_eq!(output, b"tags: tag1\nfile contents\n");
+        let str_output = str::from_utf8(&output).unwrap();
+        let expected = format!(
+            "{}{}", 
+            "tags: tag1\n".bold(),
+            "file contents\n"
+        );
+        assert_eq!(str_output, &expected);
 
     }
 
