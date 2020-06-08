@@ -37,6 +37,27 @@ pub fn list_tasks<B: BoardAccess, W: Write>(
     write!(writer, "\n").unwrap();
 }
 
+pub fn list_all<B: BoardAccess, W: Write>(
+    tag: Option<String>, board: &B, writer: &mut W
+) {
+    let todo = get_task_labels(
+        board.get_column("todo", tag.clone())
+    );
+    let doing = get_task_labels(
+        board.get_column("doing", tag.clone())
+    );
+    let done = get_task_labels(
+        board.get_column("done", tag.clone())
+    );
+
+    let tasks = vec!(
+        todo,
+        doing,
+        done
+    ).into_iter().flatten().collect::<Vec<String>>().join("\n");
+    write!(writer, "{}\n", tasks).unwrap();
+}
+
 fn get_task_labels(list: Vec<Task>) -> Vec<String> {
     list.iter().map(|t: &Task| t.name.clone()).collect()
 }
@@ -187,4 +208,28 @@ task5\t\t\ttask3\t\t\t\n\n";
             tags: None
         }
     }
+
+    #[test]
+    fn it_displays_all_tasks_as_a_list() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
+
+        board.create_task("task1", None);
+
+        list_all(None, &mut board, &mut writer);
+
+        let output = writer.get_ref();
+        let str_output = str::from_utf8(&output).unwrap();
+        let expected_output = "task1\n";
+        assert_eq!(str_output, expected_output);
+    }
+
 }

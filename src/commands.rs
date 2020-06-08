@@ -11,7 +11,7 @@ mod standard_actions;
 mod now;
 mod reindex;
 mod tag;
-use list::list_tasks;
+use list::{list_all, list_tasks};
 use edit::edit_item;
 use view::view_item;
 use now::now;
@@ -59,7 +59,8 @@ pub fn handle<B: BoardAccess, W: Write>(
         Some(SubCommand::Top(a)) => top(a.title, board),
         Some(SubCommand::Tag(a)) => tag(
             &a.title, a.tag, a.remove, board, writer
-        )
+        ),
+        Some(SubCommand::Tasks) => list_all(opts.tag, board, writer)
     }
 }
 

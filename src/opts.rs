@@ -35,7 +35,9 @@ pub enum SubCommand {
     #[clap(about="moves task to top of priorities")]
     Top(Item),
     #[clap(about="add a tag to a task or view a tasks tags")]
-    Tag(TagItem)
+    Tag(TagItem),
+    #[clap(about="list all tasks")]
+    Tasks
 }
 
 #[derive(Clap, Clone, PartialEq)]
