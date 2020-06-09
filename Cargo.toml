@@ -3,6 +3,9 @@ name = "kanben"
 version = "0.1.0"
 authors = ["Ben Brunton <benbrunton@hotmail.com>"]
 edition = "2018"
+description = "kanban for the terminal"
+license = "the unlicense"
+repository = "https://github.com/benbrunton/kanben/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
