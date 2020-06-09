@@ -28,7 +28,3 @@ kanben top <title>          # move task to top of list
 ## Autocomplete
 `source autocomplete.sh` to enable autocomplete
 
-## Roadmap
-- timestamp with option to display
-- optional config buckets
-- split task into sub-tasks
