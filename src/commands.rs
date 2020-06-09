@@ -51,7 +51,7 @@ pub fn handle<B: BoardAccess, W: Write>(
         ),
         Some(SubCommand::ClearDone) => clear_done(board),
         Some(SubCommand::Now) => now(
-            board, writer, opts.no_newlines
+            board, writer, opts.no_newlines, opts.tag
         ),
         Some(SubCommand::Reindex) => reindex(
             board, writer
