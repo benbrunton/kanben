@@ -342,7 +342,11 @@ checksum = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
 
 [[package]]
 name = "kanben"
+<<<<<<< HEAD
 version = "0.1.2"
+=======
+version = "0.1.1"
+>>>>>>> 6ebb24a416aee0ad9e08bb92254bbdde81089f9b
 dependencies = [
  "clap",
  "colored",
