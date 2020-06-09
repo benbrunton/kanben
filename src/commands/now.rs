@@ -1,6 +1,5 @@
 use std::io::Write;
 use crate::board::BoardAccess;
-use crate::opts::Column;
 
 pub fn now<B: BoardAccess>(
     board: &B,

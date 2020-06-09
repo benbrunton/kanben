@@ -176,14 +176,14 @@ impl <
     }
 
     fn update(&mut self, key: &str, task: Task) {
-        let old_tags = {
-            let result = self.get(key);
-            if result.is_none() {
-                None    
-            } else {
-                result.unwrap().tags
-            }
-        };
+        let old_task_result = self.get(key); 
+
+        if old_task_result.is_none() {
+            return;
+        }
+
+        let old_task = old_task_result.unwrap();
+        let old_tags = old_task.tags;
 
         let (add_tags, rm_tags) = self.get_tag_diff(
             old_tags,
@@ -193,9 +193,12 @@ impl <
         self.index_tags(add_tags, key);
         self.rm_tag_index(rm_tags, key);
 
-        self.remove(key);
+        if old_task.column != task.column.clone() {
+            self.remove(key);
+            self.add_to_column(key, task.column.clone());
+        }
+
         self.store.set(key, task.clone());
-        self.add_to_column(key, task.column);
     }
 
     fn remove(&mut self, key: &str){
@@ -399,6 +402,7 @@ mod tests {
             &mut col_store,
             &mut tag_store
         );
+        board.create_task("test", None);
         board.update("test", task.clone());
 
         assert!(store.set_called_with("test", &task));

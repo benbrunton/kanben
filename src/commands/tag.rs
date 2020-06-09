@@ -258,6 +258,35 @@ mod tests {
         );
     }
 
+    #[test]
+    fn priority_is_maintained_when_a_tag_is_added() {
+        let mut writer = Cursor::new(vec!());
+        let mut store = StoreMock::new();
+        let mut col_store = StoreMock::new();
+        let mut tag_store = StoreMock::new();
+        let mut board = Board::new(
+            &mut store,
+            &mut col_store,
+            &mut tag_store
+        );
+
+        board.create_task("task", None);
+        board.create_task("task2", None);
+        let tag_label = Some("tag".to_string());
+
+        tag("task", tag_label, false, &mut board, &mut writer);
+
+        let column = board.get_column("todo", None).iter()
+            .map(|task| task.name.clone())
+            .collect::<Vec<String>>();
+
+        assert_eq!(
+            column,
+            vec!("task".to_owned(), "task2".to_owned())
+        );
+
+    }
+
 
     fn get_task(key: &str, column: Column) -> Task {
         Task {

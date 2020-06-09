@@ -17,10 +17,13 @@ kanben delete <title>       # individual delete
 kanben clear-done           # clears done column
 kanben now                  # outputs in-progress tasks
 kanben tag <title> <tag>    # adds a tag to a task
+kanben top <title>          # move task to top of list
 ```
+
+## Autocomplete
+`source autocomplete.sh` to enable autocomplete
 
 ## Roadmap
 - timestamp with option to display
 - optional config buckets
 - split task into sub-tasks
-- list all (including removed and lost)
