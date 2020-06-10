@@ -11,12 +11,12 @@ pub trait Editor {
 }
 
 pub struct FileEditor {
-    default_editor: String,
+    default_editor: Option<String>,
     root_path: String
 }
 
 impl FileEditor {
-    pub fn new(default_editor: String, root_path: String) -> FileEditor {
+    pub fn new(default_editor: Option<String>, root_path: String) -> FileEditor {
         FileEditor{
             default_editor,
             root_path
@@ -24,7 +24,14 @@ impl FileEditor {
     }
 
     fn open_editor(&self, path: &str) {
-        Command::new(&self.default_editor)
+        if self.default_editor.as_ref().is_none() {
+            // error
+            return
+        }
+
+        let editor = self.default_editor.as_ref().unwrap();
+
+        Command::new(&editor)
             .arg(path)
             .status()
             .expect("Something went wrong");

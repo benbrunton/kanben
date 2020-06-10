@@ -1,6 +1,7 @@
 use std::env::var;
 use dirs::home_dir;
 use clap::{App, Clap};
+use colored::*;
 
 use kv::{Store as KvStore, Config, Json};
 
@@ -54,8 +55,16 @@ fn main() {
     let stdout = std::io::stdout();
     let mut writer = stdout.lock();
 
-    let default_editor = var("EDITOR")
-        .expect("no default editor found");
+    let default_editor_result = var("EDITOR");
+
+    let default_editor = if default_editor_result.is_err() {
+        println!("{}", "No default editor found.".red());
+        println!("{}",
+            "Set EDITOR environment variable to enable `kanben edit`.".red());
+        None
+    } else {
+        Some(default_editor_result.unwrap())
+    };
 
     let root_file_path = format!(
         "{}{}",
