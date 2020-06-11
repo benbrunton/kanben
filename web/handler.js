@@ -13,3 +13,15 @@ module.exports.hello = async event => {
     ),
   };
 };
+
+module.exports.getPutUrl = async event => {
+  return {
+    statusCode: 200,
+    body: JSON.stringify(
+      {
+        message: 'signed put url',
+        url: ''
+      }
+    )
+  };
+};

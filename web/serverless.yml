@@ -10,8 +10,11 @@ functions:
   hello:
     handler: handler.hello
     events:
-      - http: ANY /
-      - http: 'ANY {proxy+}'
+      - http: GET /
+  getPutUrl:
+    handler: handler.getPutUrl
+    events:
+      - http: POST /begin-backup
 plugins:
   - serverless-domain-manager
 
