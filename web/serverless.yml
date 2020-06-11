@@ -1,0 +1,33 @@
+service: web
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-west-2
+  profile: brunton
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - http: ANY /
+      - http: 'ANY {proxy+}'
+plugins:
+  - serverless-domain-manager
+
+resources:
+  Resources:
+    backupBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: kanben-cloud-backups
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+custom:
+  customDomain:
+    domainName: kan.benbru.com
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: true
