@@ -18,3 +18,4 @@ dirs = "2.0.2"
 libmath = "0.2.1"
 colored = "1.9"
 termimad = "0.5"
+reqwest = { version= "0.10.6", features = ["blocking", "json"] }

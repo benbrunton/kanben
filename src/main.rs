@@ -2,6 +2,7 @@ use std::env::var;
 use dirs::home_dir;
 use clap::{App, Clap};
 use colored::*;
+use reqwest;
 
 use kv::{Store as KvStore, Config, Json};
 
@@ -11,6 +12,7 @@ mod store;
 mod editor;
 mod file;
 mod board;
+mod web;
 
 #[cfg(test)]
 mod test;
@@ -20,6 +22,7 @@ use store::PersistantStore;
 use editor::FileEditor;
 use file::FileReader;
 use board::Board;
+use web::{Client, WebClient};
 
 fn main() {
     let _app = App::new("kanben");
@@ -78,13 +81,18 @@ fn main() {
     );
 
     let file_reader = FileReader::new();
+    
+    let client = reqwest::blocking::Client::new();
+    let http_client = Client::new(client);
+    let mut web = WebClient::new(http_client);
 
     commands::handle(
         opts,
         &mut board,
         &mut writer,
         &mut editor,
-        &file_reader
+        &file_reader,
+        &mut web
     );
 }
 

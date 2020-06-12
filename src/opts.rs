@@ -9,7 +9,9 @@ pub struct Opts {
     #[clap(short, long, about="supress newlines in output")]
     pub no_newlines: bool,
     #[clap(short, long, about="filter by tags")]
-    pub tag: Option<String>
+    pub tag: Option<String>,
+    #[clap(short, long, about="verbose logging to stdout")]
+    pub verbose: bool
 }
 
 #[derive(Clap)]
@@ -37,7 +39,9 @@ pub enum SubCommand {
     #[clap(about="add a tag to a task or view a tasks tags")]
     Tag(TagItem),
     #[clap(about="list all tasks")]
-    Tasks
+    Tasks,
+    #[clap(about="backup local board to the cloud")]
+    Backup
 }
 
 #[derive(Clap, Clone, PartialEq)]

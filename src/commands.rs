@@ -3,6 +3,7 @@ use crate::board::BoardAccess;
 use crate::editor::Editor;
 use crate::file::Reader;
 use std::io::Write;
+use crate::web::Web;
 
 mod list;
 mod edit;
@@ -11,6 +12,7 @@ mod standard_actions;
 mod now;
 mod reindex;
 mod tag;
+mod backup;
 use list::{list_all, list_tasks};
 use edit::edit_item;
 use view::view_item;
@@ -25,13 +27,15 @@ use standard_actions::{
     top
 };
 use tag::tag;
+use backup::backup;
 
-pub fn handle<B: BoardAccess, W: Write>(
+pub fn handle<B: BoardAccess, W: Write, Wb: Web>(
     opts: Opts,
     board: &mut B,
     writer: &mut W,
     editor: &mut dyn Editor,
     file_reader: &dyn Reader,
+    web: &mut Wb
 ) {
     match opts.subcmd {
         None => list_tasks(opts.tag, board, writer),
@@ -60,14 +64,22 @@ pub fn handle<B: BoardAccess, W: Write>(
         Some(SubCommand::Tag(a)) => tag(
             &a.title, a.tag, a.remove, board, writer
         ),
-        Some(SubCommand::Tasks) => list_all(opts.tag, board, writer)
+        Some(SubCommand::Tasks) => list_all(
+            opts.tag, board, writer
+        ),
+        Some(SubCommand::Backup) => backup(web)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{BoardMock, EditorMock, ReaderMock};
+    use crate::test::{
+        BoardMock,
+        EditorMock,
+        ReaderMock,
+        WebMock,
+    };
     use std::io::Cursor;
 
     #[test]
@@ -75,6 +87,7 @@ mod tests {
         let mut writer = Cursor::new(vec!());
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
+        let mut web = WebMock::new();
         let reader = ReaderMock::new();
         let name = String::from("test");
         let item = NewItem{
@@ -93,7 +106,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
         assert!(board.create_task_called_with(&name));
     }
@@ -104,6 +118,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let mut web = WebMock::new();
         let name = String::from(" ");
         let item = NewItem{
             title: name.clone(),
@@ -121,7 +136,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
         assert!(!board.create_task_called_with(" "));
     }
@@ -132,6 +148,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let mut web = WebMock::new();
         let opts = Opts {
             subcmd: None,
             no_newlines: false,
@@ -143,7 +160,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
 
         let output = writer.get_ref();
@@ -156,6 +174,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let mut web = WebMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -172,7 +191,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
         assert!(board.remove_called_with(&name));
 
@@ -184,6 +204,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let mut web = WebMock::new();
 
         board.set_tasks(vec!(
             get_task("task1", Column::Doing),
@@ -204,7 +225,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
 
         assert!(board.remove_called_with("task3"));
@@ -219,6 +241,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let mut web = WebMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -240,7 +263,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
         assert!(editor.open_called());
     }
@@ -251,6 +275,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut reader = ReaderMock::new();
+        let mut web = WebMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -272,7 +297,8 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
 
         let output = writer.get_ref();
@@ -285,6 +311,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
+        let mut web = WebMock::new();
 
         let opts = Opts{
             subcmd: Some(SubCommand::Now),
@@ -297,11 +324,40 @@ mod tests {
             &mut board,
             &mut writer,
             &mut editor,
-            &reader
+            &reader,
+            &mut web
         );
 
         let output = writer.get_ref();
         assert_eq!(output, b"");
+    }
+
+    #[test]
+    fn it_backs_up_to_the_cloud() {
+        let mut writer = Cursor::new(vec!());
+        let mut board = BoardMock::new();
+        let mut editor = EditorMock::new();
+        let reader = ReaderMock::new();
+        let mut web = WebMock::new();
+
+        let opts = Opts{
+            subcmd: Some(SubCommand::Backup),
+            no_newlines: false,
+            tag: None
+        };
+
+        handle(
+            opts,
+            &mut board,
+            &mut writer,
+            &mut editor,
+            &reader,
+            &mut web
+        );
+
+        let output = writer.get_ref();
+        assert_eq!(output, b"");
+
     }
 
     fn get_task(key: &str, column: Column) -> Task {

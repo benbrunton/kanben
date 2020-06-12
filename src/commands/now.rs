@@ -34,7 +34,7 @@ pub fn now<B: BoardAccess>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::opts::Task;
+    use crate::opts::{Task, Column};
     use crate::test::StoreMock;
     use crate::board::Board;
     use std::{str, io::Cursor};
