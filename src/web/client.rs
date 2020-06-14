@@ -1,5 +1,5 @@
 use reqwest::{blocking::Client as ReqwestClient, Error};
-use serde::Deserialize;
+use serde::{Deserialize, de::DeserializeOwned};
 
 #[derive(Debug, Deserialize)]
 pub struct BeginBackupResponse {
@@ -18,20 +18,22 @@ impl Client {
         Client { req_client }
     }
 
-    pub fn begin_backup(&mut self) 
+    pub fn begin_backup(&self) 
         -> Result<BeginBackupResponse, Error> {
-        // first we're going to hit the endpoint
-        let res_result = self.req_client.post(
-            "https://kan.benbru.com/begin-backup"
-        ).send();
+        // first we're going to request a signed url
+        self.json_or_error("https://kan.benbru.com/begin-backup")
+    }
+
+    fn json_or_error<T: DeserializeOwned>(
+        &self, path: &str) -> Result<T, Error> {
+        let res_result = self.req_client.post(path).send();
 
         match res_result {
             Ok(r) => {
-                let response_body: BeginBackupResponse = r.json()?;
+                let response_body: T = r.json()?;
                 Ok(response_body)
             },
             Err(err) => Err(err)
         }
-
     }
 }

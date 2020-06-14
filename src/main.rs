@@ -25,6 +25,8 @@ use board::Board;
 use web::{Client, WebClient};
 
 fn main() {
+//    let web_service_path = env!("KANBEN_WEB_SERVICE_PATH");
+
     let _app = App::new("kanben");
 
     let opts: Opts = Opts::parse();
