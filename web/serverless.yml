@@ -5,6 +5,16 @@ provider:
   runtime: nodejs12.x
   region: eu-west-2
   profile: brunton
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:putObject
+      Resource: 
+        Fn::Join:
+          - ''
+          - - 'arn:aws:s3:::'
+            - 'Ref': 'backupBucket'
+            - '/*'
 
 functions:
   hello:
@@ -15,6 +25,8 @@ functions:
     handler: handler.getPutUrl
     events:
       - http: POST /begin-backup
+    environment:
+      BUCKET_NAME: ${self:custom.bucket}
 plugins:
   - serverless-domain-manager
 
@@ -23,7 +35,7 @@ resources:
     backupBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: kanben-cloud-backups
+        BucketName: ${self:custom.bucket} # kanben-cloud-backups
         BucketEncryption:
           ServerSideEncryptionConfiguration:
             - ServerSideEncryptionByDefault:
@@ -34,3 +46,4 @@ custom:
     basePath: ''
     stage: ${self:provider.stage}
     createRoute53Record: true
+  bucket: kanben-cloud-backups

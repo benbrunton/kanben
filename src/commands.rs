@@ -2,6 +2,7 @@ use crate::opts::*;
 use crate::board::BoardAccess;
 use crate::editor::Editor;
 use crate::file::Reader;
+use crate::archive::Archive;
 use std::io::Write;
 use crate::web::Web;
 
@@ -29,13 +30,14 @@ use standard_actions::{
 use tag::tag;
 use backup::backup;
 
-pub fn handle<B: BoardAccess, W: Write, Wb: Web>(
+pub fn handle<B: BoardAccess, W: Write, Wb: Web, A: Archive>(
     opts: Opts,
     board: &mut B,
     writer: &mut W,
     editor: &mut dyn Editor,
     file_reader: &dyn Reader,
-    web: &mut Wb
+    web: &mut Wb,
+    archive: &A
 ) {
     match opts.subcmd {
         None => list_tasks(opts.tag, board, writer),
@@ -67,7 +69,7 @@ pub fn handle<B: BoardAccess, W: Write, Wb: Web>(
         Some(SubCommand::Tasks) => list_all(
             opts.tag, board, writer
         ),
-        Some(SubCommand::Backup) => backup(web)
+        Some(SubCommand::Backup) => backup(web, archive)
     }
 }
 
@@ -79,6 +81,7 @@ mod tests {
         EditorMock,
         ReaderMock,
         WebMock,
+        ArchiveMock,
     };
     use std::io::Cursor;
 
@@ -88,6 +91,7 @@ mod tests {
         let mut board = BoardMock::new();
         let mut editor = EditorMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
         let reader = ReaderMock::new();
         let name = String::from("test");
         let item = NewItem{
@@ -98,7 +102,8 @@ mod tests {
         let opts = Opts {
             subcmd: Some(SubCommand::Add(item.clone())),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false,
         };
 
         handle(
@@ -107,7 +112,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
         assert!(board.create_task_called_with(&name));
     }
@@ -119,6 +125,7 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
         let name = String::from(" ");
         let item = NewItem{
             title: name.clone(),
@@ -128,7 +135,8 @@ mod tests {
         let opts = Opts {
             subcmd: Some(SubCommand::Add(item.clone())),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
 
         handle(
@@ -137,7 +145,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
         assert!(!board.create_task_called_with(" "));
     }
@@ -149,10 +158,12 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
         let opts = Opts {
             subcmd: None,
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false,
         };
 
         handle(
@@ -161,7 +172,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
 
         let output = writer.get_ref();
@@ -175,6 +187,7 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -183,7 +196,8 @@ mod tests {
         let opts = Opts {
             subcmd: Some(SubCommand::Delete(item.clone())),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
 
         handle(
@@ -192,7 +206,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
         assert!(board.remove_called_with(&name));
 
@@ -205,6 +220,7 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
 
         board.set_tasks(vec!(
             get_task("task1", Column::Doing),
@@ -217,7 +233,8 @@ mod tests {
         let opts = Opts {
             subcmd: Some(SubCommand::ClearDone),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
 
         handle(
@@ -226,7 +243,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
 
         assert!(board.remove_called_with("task3"));
@@ -242,6 +260,7 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -255,7 +274,8 @@ mod tests {
         let opts = Opts {
             subcmd: Some(SubCommand::Edit(item.clone())),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
 
         handle(
@@ -264,7 +284,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
         assert!(editor.open_called());
     }
@@ -276,6 +297,7 @@ mod tests {
         let mut editor = EditorMock::new();
         let mut reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
         let name = String::from("test");
         let item = Item{
             title: name.clone()
@@ -290,7 +312,8 @@ mod tests {
         let opts = Opts{
             subcmd: Some(SubCommand::View(item.clone())),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
         handle(
             opts,
@@ -298,7 +321,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
 
         let output = writer.get_ref();
@@ -312,11 +336,13 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
 
         let opts = Opts{
             subcmd: Some(SubCommand::Now),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
 
         handle(
@@ -325,7 +351,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
 
         let output = writer.get_ref();
@@ -339,11 +366,13 @@ mod tests {
         let mut editor = EditorMock::new();
         let reader = ReaderMock::new();
         let mut web = WebMock::new();
+        let archive = ArchiveMock::new();
 
         let opts = Opts{
             subcmd: Some(SubCommand::Backup),
             no_newlines: false,
-            tag: None
+            tag: None,
+            verbose: false
         };
 
         handle(
@@ -352,7 +381,8 @@ mod tests {
             &mut writer,
             &mut editor,
             &reader,
-            &mut web
+            &mut web,
+            &archive
         );
 
         let output = writer.get_ref();

@@ -1,4 +1,5 @@
 use crate::web::Web;
+use std::fs::File;
 
 pub struct WebMock{
     is_send_to_backup_called: bool
@@ -17,7 +18,7 @@ impl WebMock {
 }
 
 impl Web for WebMock {
-    fn send_backup(&mut self) -> Result<(), ()> {
+    fn send_backup(&mut self, _: &str, _: File) -> Result<(), ()> {
         self.is_send_to_backup_called = true;
         Ok(())
     }
@@ -29,8 +30,9 @@ mod tests {
 
     #[test]
     fn it_returns_true_when_send_to_backup_is_called() {
+        let file = File::create("foo.txt").unwrap();
         let mut web = WebMock::new();
-        let _ = web.send_backup();
+        let _ = web.send_backup("abc", file);
 
         assert!(web.send_backup_called());
     }

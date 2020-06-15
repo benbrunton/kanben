@@ -6,6 +6,9 @@ use reqwest;
 
 use kv::{Store as KvStore, Config, Json};
 
+use flexi_logger::{Logger, opt_format, Duplicate};
+use log::info;
+
 mod commands;
 mod opts;
 mod store;
@@ -13,6 +16,7 @@ mod editor;
 mod file;
 mod board;
 mod web;
+mod archive;
 
 #[cfg(test)]
 mod test;
@@ -21,15 +25,34 @@ use opts::Opts;
 use store::PersistantStore;
 use editor::FileEditor;
 use file::FileReader;
+use archive::ZipArchive;
 use board::Board;
 use web::{Client, WebClient};
 
 fn main() {
 //    let web_service_path = env!("KANBEN_WEB_SERVICE_PATH");
 
+
     let _app = App::new("kanben");
 
     let opts: Opts = Opts::parse();
+
+    let log_handle = Logger::with_env_or_str(
+        "info"
+    ).log_to_file()
+        .directory("/tmp/.kanben")
+        .format(opt_format);
+
+    if opts.verbose {
+        log_handle.duplicate_to_stderr(Duplicate::Info)
+            .start().unwrap();
+    } else {
+        log_handle.start()
+            .unwrap();
+    }
+
+    info!("kanben starting up!");
+
 
     let home_path_bfr = home_dir().unwrap();
     let home_path = home_path_bfr.to_str().unwrap();
@@ -87,6 +110,7 @@ fn main() {
     let client = reqwest::blocking::Client::new();
     let http_client = Client::new(client);
     let mut web = WebClient::new(http_client);
+    let archive = ZipArchive::new(&cfg_location);
 
     commands::handle(
         opts,
@@ -94,7 +118,8 @@ fn main() {
         &mut writer,
         &mut editor,
         &file_reader,
-        &mut web
+        &mut web,
+        &archive
     );
 }
 

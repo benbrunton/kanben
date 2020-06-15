@@ -19,3 +19,8 @@ libmath = "0.2.1"
 colored = "1.9"
 termimad = "0.5"
 reqwest = { version= "0.10.6", features = ["blocking", "json"] }
+zip = "0.5.6"
+log = "0.4"
+flexi_logger = { version = "0.15", default_features = false }
+fs_extra = "1.1.0"
+walkdir = "2"

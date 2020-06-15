@@ -1,3 +1,6 @@
+use std::fs::File;
+use log::{info, error};
+
 mod client;
 pub use client::Client;
 
@@ -5,7 +8,9 @@ pub use client::Client;
 // the command controller
 
 pub trait Web {
-    fn send_backup(&mut self) -> Result<(), ()>;
+    fn send_backup(
+        &mut self, filename: &str, file: File
+    ) -> Result<(), ()>;
 }
 
 pub struct WebClient {
@@ -21,16 +26,27 @@ impl WebClient {
 }
 
 impl Web for WebClient {
-    // todo: verbose logging
-    fn send_backup(&mut self) -> Result<(), ()>{
-        // first we're going to hit the endpoint
-        let res_result = self.client.begin_backup();
-        match res_result {
-            Ok(r) => {
-                println!("{:?}", r)
-            },
-            _ => ()
+    fn send_backup(
+        &mut self,
+        filename: &str,
+        file: File
+    ) -> Result<(), ()>{
+        info!("beginning backup: [{}]", filename);
+        let res_result = self.client.begin_backup(filename);
+        if res_result.is_err() {
+            // todo what happens in failure?
+            return Err(());
         }
-        Ok(())
+
+        let response = res_result.unwrap();
+        info!("msg from signed url: {}", response.message);
+        let r = self.client.put_backup(&response.url, file);
+        if r.is_ok() {
+            info!("file upload successful");
+            Ok(())
+        } else {
+            error!("response from file put: {}", r.err().unwrap());
+            Err(())
+        }
     }
 }
